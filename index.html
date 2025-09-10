@@ -1,39 +1,111 @@
-<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
-<video id="preview" style="width:100%; max-width:400px; border:1px solid #ccc;" autoplay muted playsinline></video>
-<script>
-  // Create a ZXing reader
-  const codeReader = new ZXing.BrowserMultiFormatReader();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Scanner Test</title>
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
+  <style>
+    body { font-family: system-ui, Arial; margin: 16px; }
+    video { width: 100%; max-width: 420px; border: 1px solid #ccc; border-radius: 8px; }
+    select, button { padding: 8px 10px; margin-right: 8px; }
+    #log { white-space: pre-wrap; background:#f8f8ff; border:1px solid #ddd; padding:10px; max-width: 720px; }
+    .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; }
+  </style>
+</head>
+<body>
+  <h1>ZXing Scanner Test</h1>
 
-  async function startScanner() {
-    try {
-      // List cameras
-      const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
-      console.log('Video devices:', devices);
+  <div class="row">
+    <label for="cameraSelect">Camera:</label>
+    <select id="cameraSelect"></select>
+    <button id="startBtn">Start Scanner</button>
+    <button id="stopBtn" disabled>Stop</button>
+  </div>
 
-      // Pick the first camera (usually rear camera on phone)
-      const selectedDeviceId = devices[0].deviceId;
+  <video id="preview" autoplay muted playsinline></video>
 
-      // Start decoding from that camera into our video element
-      codeReader.decodeFromVideoDevice(selectedDeviceId, 'preview', (result, err) => {
-        if (result) {
-          console.log('Scanned:', result.getText());
-          document.getElementById('lastScan').textContent = result.getText();
-        }
-        if (err && !(err instanceof ZXing.NotFoundException)) {
-          console.error(err);
-        }
-      });
-    } catch (e) {
-      console.error(e);
+  <p><strong>Last scan:</strong> <span id="lastScan">—</span></p>
+
+  <h3>Log</h3>
+  <div id="log">Ready…</div>
+
+  <script>
+    const logEl = document.getElementById('log');
+    const lastScanEl = document.getElementById('lastScan');
+    const cameraSelect = document.getElementById('cameraSelect');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn  = document.getElementById('stopBtn');
+
+    function log(msg){ logEl.textContent += '\\n' + msg; }
+    function setButtons(scanning){
+      startBtn.disabled = scanning;
+      stopBtn.disabled  = !scanning;
     }
-  }
 
-  // Stop scanner
-  async function stopScanner() {
-    await codeReader.reset();
-  }
-</script>
-<button onclick="startScanner()">Start Scanner</button>
-<button onclick="stopScanner()">Stop Scanner</button>
-<div id="lastScan">Nothing scanned yet.</div>
+    let codeReader = null;
 
+    async function listCameras(){
+      try {
+        const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
+        log('Found cameras: ' + devices.length);
+        cameraSelect.innerHTML = '';
+        devices.forEach((d,i)=>{
+          const opt = document.createElement('option');
+          opt.value = d.deviceId;
+          opt.textContent = d.label || `camera ${i+1}`;
+          cameraSelect.appendChild(opt);
+        });
+        if (devices.length === 0) {
+          log('No cameras found. Check browser permission settings.');
+        }
+      } catch (e) {
+        log('Error listing cameras: ' + e.message);
+      }
+    }
+
+    async function startScanner(){
+      try {
+        setButtons(true);
+        if (codeReader) await codeReader.reset();
+        codeReader = new ZXing.BrowserMultiFormatReader();
+        const deviceId = cameraSelect.value || undefined;
+
+        await codeReader.decodeFromVideoDevice(deviceId, 'preview', (result, err) => {
+          if (result) {
+            const text = result.getText();
+            lastScanEl.textContent = text;
+            log('Scanned: ' + text);
+          } else if (err && !(err instanceof ZXing.NotFoundException)) {
+            log('Decode error: ' + err);
+          }
+        });
+        log('Scanner started.');
+      } catch (e) {
+        log('Start error: ' + (e.message || e));
+        setButtons(false);
+      }
+    }
+
+    async function stopScanner(){
+      try {
+        if (codeReader) await codeReader.reset();
+        log('Scanner stopped.');
+      } catch(e){
+        log('Stop error: ' + e.message);
+      } finally {
+        setButtons(false);
+      }
+    }
+
+    // Init
+    (async ()=>{
+      await listCameras();
+      log('If the camera list is empty, tap Start, accept the camera permission, then reload.');
+    })();
+
+    startBtn.onclick = startScanner;
+    stopBtn.onclick  = stopScanner;
+  </script>
+</body>
+</html>
