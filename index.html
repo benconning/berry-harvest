@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Berry Harvest Scanner</title>
+  <title>Berry Harvest</title>
   <!-- ZXing for barcode/QR scanning -->
   <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
   <style>
@@ -11,106 +11,274 @@
     h1 { margin: 0 0 10px 0; }
     .topbar { margin-bottom: 12px; display:flex; gap:8px; flex-wrap:wrap; }
     button { padding: 8px 12px; cursor: pointer; }
-    video { width: 100%; max-width: 420px; border: 1px solid #ccc; border-radius: 8px; }
-    #log { white-space: pre-wrap; background:#f8f8ff; border:1px solid #ddd; padding:10px; max-width: 720px; }
+    select, input { padding: 6px 8px; }
+    video { width: 100%; max-width: 460px; border: 1px solid #ccc; border-radius: 8px; }
     .row { display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
-    table { border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: center; }
+    .card { border:1px solid #ddd; border-radius:8px; padding:10px; margin-top:10px; }
+    #log { white-space: pre-wrap; background:#f8f8ff; border:1px solid #ddd; padding:10px; max-width: 740px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
     .hidden { display:none; }
+    .pill { border:1px solid #ccc; padding:4px 8px; border-radius:999px; background:#f7f7ff; }
+    .muted { color:#666; font-size: 13px; }
   </style>
 </head>
 <body>
-  <h1>🍓 Berry Harvest Scanner</h1>
+  <h1>🍓 Berry Harvest</h1>
 
   <!-- Top navigation -->
   <div class="topbar">
     <button id="btnScanner">📷 Scanner</button>
+    <button id="btnRecords">📄 Records</button>
     <button id="btnSettings">⚙️ Settings</button>
   </div>
 
   <!-- ========== Scanner Screen ========== -->
   <div id="scannerScreen">
-    <div class="row">
-      <label for="cameraSelect">Camera:</label>
-      <select id="cameraSelect"></select>
-      <button id="startBtn">Start Scanner</button>
-      <button id="stopBtn" disabled>Stop</button>
+    <div class="card">
+      <strong>Context (sticky)</strong>
+      <div class="row" style="margin-top:6px">
+        <label>Variety:
+          <select id="varietySelect">
+            <option value="">-- choose --</option>
+            <option>Albion</option>
+            <option>Camarosa</option>
+            <option>Ventana</option>
+          </select>
+        </label>
+        <label>Block:
+          <select id="blockSelect">
+            <option value="">-- choose --</option>
+            <option>GH1-R01</option>
+            <option>GH2-R12</option>
+            <option>Block 5</option>
+          </select>
+        </label>
+        <label>Size:
+          <select id="sizeSelect">
+            <option>Small</option>
+            <option>Medium</option>
+            <option>Large</option>
+          </select>
+        </label>
+        <span class="muted">These stay until you change them.</span>
+      </div>
     </div>
 
-    <video id="preview" autoplay muted playsinline></video>
+    <div class="card">
+      <strong>Scanner</strong>
+      <div class="row" style="margin-top:6px">
+        <label for="cameraSelect">Camera:</label>
+        <select id="cameraSelect"></select>
+        <button id="startBtn">Start</button>
+        <button id="stopBtn" disabled>Stop</button>
+        <span class="pill" id="batchCount">Batch: 0 crates</span>
+      </div>
 
-    <p><strong>Last scan:</strong> <span id="lastScan">—</span></p>
+      <video id="preview" autoplay muted playsinline></video>
 
-    <h3>Log</h3>
-    <div id="log">Ready…</div>
+      <div class="row" style="margin-top:8px">
+        <label><input type="checkbox" id="partialToggle"> Partial crate</label>
+        <label>Manual punnets:
+          <input id="manualPunnets" type="number" min="1" step="1" value="2" disabled>
+        </label>
+        <span class="muted">Use this only if the crate isn't full.</span>
+      </div>
+
+      <p><strong>Last scan:</strong> <span id="lastScan">—</span></p>
+      <div id="log" class="muted">Ready…</div>
+    </div>
+  </div>
+
+  <!-- ========== Records Screen ========== -->
+  <div id="recordsScreen" class="hidden">
+    <div class="card">
+      <div class="row">
+        <label>Filter:
+          <select id="dateFilter">
+            <option value="today">Today</option>
+            <option value="7">Last 7 days</option>
+            <option value="month">This month</option>
+            <option value="all">All</option>
+          </select>
+        </label>
+        <button id="exportCSVBtn">Export CSV</button>
+        <button id="clearAllBtn" style="margin-left:auto;">Clear All</button>
+      </div>
+      <div class="row">
+        <span class="pill">Rows: <span id="rowsCount">0</span></span>
+        <span class="pill">Punnets: <span id="totalPunnets">0</span></span>
+        <span class="pill">Kg: <span id="totalKg">0.00</span></span>
+      </div>
+      <div style="max-height: 420px; overflow:auto; margin-top:8px;">
+        <table id="recordsTable">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Picker</th>
+              <th>Crate</th>
+              <th>Variety</th>
+              <th>Block</th>
+              <th>Size</th>
+              <th>Punnets</th>
+              <th>Kg</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- ========== Settings Screen ========== -->
-  <div id="settingsScreen" class="hidden" style="margin-top:20px; border:1px solid #ccc; padding:10px; border-radius:8px;">
-    <h2>⚙️ Punnet Settings</h2>
-    <p>Change the number of punnets per crate and the weight per punnet (grams). These values are saved on this device.</p>
-    
-    <table>
-      <thead>
-        <tr>
-          <th>Size</th>
-          <th>Punnets per Crate</th>
-          <th>Punnet Weight (g)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Small</td>
-          <td><input id="smallPunnets" type="number" value="32" /></td>
-          <td><input id="smallWeight" type="number" value="250" /></td>
-        </tr>
-        <tr>
-          <td>Medium</td>
-          <td><input id="mediumPunnets" type="number" value="20" /></td>
-          <td><input id="mediumWeight" type="number" value="400" /></td>
-        </tr>
-        <tr>
-          <td>Large</td>
-          <td><input id="largePunnets" type="number" value="8" /></td>
-          <td><input id="largeWeight" type="number" value="800" /></td>
-        </tr>
-      </tbody>
-    </table>
+  <div id="settingsScreen" class="hidden">
+    <div class="card">
+      <h2>⚙️ Punnet Settings</h2>
+      <p>Change the number of punnets per crate and the weight per punnet (grams). Saved on this device.</p>
 
-    <button id="saveSettingsBtn" style="margin-top:10px;">💾 Save Settings</button>
+      <table>
+        <thead>
+          <tr>
+            <th>Size</th>
+            <th>Punnets per Crate</th>
+            <th>Punnet Weight (g)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Small</td>
+            <td><input id="smallPunnets" type="number" value="32" /></td>
+            <td><input id="smallWeight" type="number" value="250" /></td>
+          </tr>
+          <tr>
+            <td>Medium</td>
+            <td><input id="mediumPunnets" type="number" value="20" /></td>
+            <td><input id="mediumWeight" type="number" value="400" /></td>
+          </tr>
+          <tr>
+            <td>Large</td>
+            <td><input id="largePunnets" type="number" value="8" /></td>
+            <td><input id="largeWeight" type="number" value="800" /></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <button id="saveSettingsBtn" style="margin-top:10px;">💾 Save Settings</button>
+    </div>
   </div>
 
   <script>
-  // Wrap everything so we don't leak variables
   (function(){
-    // ----------- UI helpers -----------
+    // ----------------- Utilities -----------------
     const $ = (id) => document.getElementById(id);
-    const scannerScreen  = $('scannerScreen');
-    const settingsScreen = $('settingsScreen');
-    const btnScanner  = $('btnScanner');
-    const btnSettings = $('btnSettings');
+    const fmtKg = (n) => Number(n).toFixed(2);
+    const nowISO = () => new Date().toISOString();
 
-    function showScanner(){
-      settingsScreen.classList.add('hidden');
-      scannerScreen.classList.remove('hidden');
+    // ----------------- Navigation -----------------
+    const screens = {
+      scanner: $('scannerScreen'),
+      records: $('recordsScreen'),
+      settings: $('settingsScreen')
+    };
+    function show(screen){
+      Object.values(screens).forEach(s => s.classList.add('hidden'));
+      screens[screen].classList.remove('hidden');
     }
-    function showSettings(){
-      stopScanner();          // stop camera while on settings
-      loadSettingsIntoForm(); // populate inputs
-      scannerScreen.classList.add('hidden');
-      settingsScreen.classList.remove('hidden');
+    $('btnScanner').onclick = ()=> show('scanner');
+    $('btnRecords').onclick = ()=> { renderRecords(); show('records'); };
+    $('btnSettings').onclick = ()=> { stopScanner(); loadSettingsIntoForm(); show('settings'); };
+
+    // ----------------- Settings (punnets/weights) -----------------
+    const defaultPunnetSettings = {
+      Small:  { punnetsPerCrate: 32, punnetWeightG: 250 },
+      Medium: { punnetsPerCrate: 20, punnetWeightG: 400 },
+      Large:  { punnetsPerCrate: 8,  punnetWeightG: 800 }
+    };
+    function getPunnetSettings(){
+      const saved = localStorage.getItem('punnetSettings');
+      return saved ? JSON.parse(saved) : { ...defaultPunnetSettings };
+    }
+    function setPunnetSettings(obj){
+      localStorage.setItem('punnetSettings', JSON.stringify(obj));
+    }
+    function loadSettingsIntoForm(){
+      const s = getPunnetSettings();
+      $('smallPunnets').value = s.Small.punnetsPerCrate;
+      $('smallWeight').value  = s.Small.punnetWeightG;
+      $('mediumPunnets').value = s.Medium.punnetsPerCrate;
+      $('mediumWeight').value  = s.Medium.punnetWeightG;
+      $('largePunnets').value = s.Large.punnetsPerCrate;
+      $('largeWeight').value  = s.Large.punnetWeightG;
+    }
+    $('saveSettingsBtn').onclick = ()=>{
+      const s = {
+        Small:  { punnetsPerCrate: parseInt($('smallPunnets').value||'0',10), punnetWeightG: parseInt($('smallWeight').value||'0',10) },
+        Medium: { punnetsPerCrate: parseInt($('mediumPunnets').value||'0',10), punnetWeightG: parseInt($('mediumWeight').value||'0',10) },
+        Large:  { punnetsPerCrate: parseInt($('largePunnets').value||'0',10),  punnetWeightG: parseInt($('largeWeight').value||'0',10) }
+      };
+      setPunnetSettings(s);
+      alert('✅ Settings saved!');
+    };
+
+    // ----------------- Sticky context (variety/block/size) -----------------
+    function loadContext(){
+      try { return JSON.parse(localStorage.getItem('scanContext')||'{}'); } catch(e){ return {}; }
+    }
+    function saveContext(ctx){
+      localStorage.setItem('scanContext', JSON.stringify(ctx));
+    }
+    const varietySelect = $('varietySelect');
+    const blockSelect   = $('blockSelect');
+    const sizeSelect    = $('sizeSelect');
+
+    // restore context
+    (()=>{
+      const ctx = loadContext();
+      if (ctx.variety) varietySelect.value = ctx.variety;
+      if (ctx.block)   blockSelect.value = ctx.block;
+      if (ctx.size)    sizeSelect.value = ctx.size;
+    })();
+    // save on change
+    [varietySelect,blockSelect,sizeSelect].forEach(el=>{
+      el.addEventListener('change', ()=>{
+        saveContext({ variety: varietySelect.value, block: blockSelect.value, size: sizeSelect.value });
+      });
+    });
+
+    // ----------------- Records store -----------------
+    function getRecords(){
+      try { return JSON.parse(localStorage.getItem('harvestRecords')||'[]'); } catch(e){ return []; }
+    }
+    function setRecords(arr){
+      localStorage.setItem('harvestRecords', JSON.stringify(arr));
     }
 
-    // Bind buttons (no inline handlers)
-    btnScanner.addEventListener('click', showScanner);
-    btnSettings.addEventListener('click', showSettings);
+    // ----------------- QR Parsing -----------------
+    function parseKV(text){
+      const out = { raw: text||'' };
+      if(!text) return out;
+      // Accept "key=value;key=value" or just plain IDs
+      text.split(/[;,\n]/).forEach(pair=>{
+        const [k,...rest] = pair.split('=');
+        if(rest.length){
+          out[k.trim().toLowerCase()] = rest.join('=').trim();
+        }
+      });
+      // Common fallbacks: if raw looks like P07, treat as picker
+      if (!out.picker && /^[A-Za-z]\d{2,}$/.test(out.raw||'')) out.picker = out.raw.trim();
+      return out;
+    }
 
-    // ----------- Scanner -----------
+    // ----------------- Scanner -----------------
     const logEl = $('log');
     const lastScanEl = $('lastScan');
     const cameraSelect = $('cameraSelect');
     const startBtn = $('startBtn');
     const stopBtn  = $('stopBtn');
+    const batchCountEl = $('batchCount');
+    const partialToggle = $('partialToggle');
+    const manualPunnets = $('manualPunnets');
 
     function log(msg){ logEl.textContent += '\\n' + msg; }
     function setButtons(scanning){
@@ -118,8 +286,11 @@
       stopBtn.disabled  = !scanning;
     }
 
-    let codeReader = null;
+    partialToggle.onchange = ()=>{
+      manualPunnets.disabled = !partialToggle.checked;
+    };
 
+    let codeReader = null;
     async function listCameras(){
       try {
         const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
@@ -136,7 +307,6 @@
         log('Error listing cameras: ' + e.message);
       }
     }
-
     async function startScanner(){
       try {
         setButtons(true);
@@ -148,7 +318,7 @@
           if (result) {
             const text = result.getText();
             lastScanEl.textContent = text;
-            log('Scanned: ' + text);
+            handleScan(text);
           } else if (err && !(err instanceof ZXing.NotFoundException)) {
             log('Decode error: ' + err);
           }
@@ -159,7 +329,6 @@
         setButtons(false);
       }
     }
-
     async function stopScanner(){
       try {
         if (codeReader) await codeReader.reset();
@@ -170,56 +339,169 @@
         setButtons(false);
       }
     }
+    startBtn.onclick = startScanner;
+    stopBtn.onclick  = stopScanner;
 
-    startBtn.addEventListener('click', startScanner);
-    stopBtn.addEventListener('click',  stopScanner);
+    // Handle each scan: create and save a record
+    function handleScan(rawText){
+      const kv = parseKV(rawText);
 
-    // On page load, prep camera list
+      const ctx = loadContext();
+      const size = ctx.size || 'Small';
+      const variety = ctx.variety || '';
+      const block   = ctx.block || '';
+
+      const settings = getPunnetSettings();
+      const sizeCfg = settings[size] || settings.Small;
+
+      // Decide punnets for this entry
+      const isPartial = !!partialToggle.checked;
+      const manual = parseInt(manualPunnets.value||'0',10);
+      const punnets = isPartial ? Math.max(1, manual) : sizeCfg.punnetsPerCrate;
+
+      const kg = (punnets * sizeCfg.punnetWeightG) / 1000;
+
+      // Build record
+      const rec = {
+        timestamp: nowISO(),
+        picker_id: kv.picker || 'Unknown',
+        crate_id:  kv.crate || kv.crateid || '', // support crate or crateid
+        variety: variety,
+        block: block,
+        size: size,
+        punnets_per_crate: sizeCfg.punnetsPerCrate,
+        is_partial: isPartial,
+        manual_punnets: isPartial ? punnets : null,
+        crate_qty: 1,
+        punnets_total: punnets,
+        punnet_weight_g: sizeCfg.punnetWeightG,
+        kg: Number(kg.toFixed(3)),
+        scan_raw: rawText
+      };
+
+      // Save
+      const all = getRecords();
+      all.push(rec);
+      setRecords(all);
+
+      // UI counters
+      const batchCount = Number(batchCountEl.dataset.count || '0') + 1;
+      batchCountEl.dataset.count = batchCount;
+      batchCountEl.textContent = `Batch: ${batchCount} crates`;
+
+      // Reset partial toggle for next scan
+      if (isPartial) {
+        partialToggle.checked = false;
+        manualPunnets.disabled = true;
+      }
+
+      // Log + toast
+      log(`Saved: ${rec.picker_id} • ${rec.size} • ${rec.punnets_total} punnets = ${rec.kg} kg`);
+    }
+
+    // Prepare on load
     (async ()=>{
       await listCameras();
       log('If the camera list is empty, tap Start, accept the camera permission, then reload.');
     })();
 
-    // ----------- Settings storage -----------
-    // Default values in case nothing is saved yet
-    const defaultPunnetSettings = {
-      Small:  { punnetsPerCrate: 32, punnetWeightG: 250 },
-      Medium: { punnetsPerCrate: 20, punnetWeightG: 400 },
-      Large:  { punnetsPerCrate: 8,  punnetWeightG: 800 }
+    // ----------------- Records page -----------------
+    const dateFilter = $('dateFilter');
+    const rowsCount = $('rowsCount');
+    const totalPunnets = $('totalPunnets');
+    const totalKg = $('totalKg');
+    const recordsTableBody = $('recordsTable').querySelector('tbody');
+
+    dateFilter.onchange = ()=> renderRecords();
+
+    function withinFilter(ts, filterVal){
+      const t = new Date(ts);
+      const now = new Date();
+      if (filterVal === 'all') return true;
+      if (filterVal === 'today'){
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        return t >= start;
+      }
+      if (filterVal === '7'){ // last 7 days
+        const start = new Date(now);
+        start.setDate(now.getDate() - 6); // inclusive today + 6 back
+        start.setHours(0,0,0,0);
+        return t >= start;
+      }
+      if (filterVal === 'month'){
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        return t >= start;
+      }
+      return true;
+    }
+
+    function renderRecords(){
+      const all = getRecords();
+      const filt = dateFilter.value || 'today';
+      const rows = all.filter(r => withinFilter(r.timestamp, filt));
+
+      // totals
+      const punnetsSum = rows.reduce((s,r)=> s + Number(r.punnets_total||0), 0);
+      const kgSum = rows.reduce((s,r)=> s + Number(r.kg||0), 0);
+
+      rowsCount.textContent = rows.length;
+      totalPunnets.textContent = punnetsSum;
+      totalKg.textContent = fmtKg(kgSum);
+
+      // table
+      recordsTableBody.innerHTML = '';
+      rows.forEach(r=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${new Date(r.timestamp).toLocaleString()}</td>
+          <td>${r.picker_id}</td>
+          <td>${r.crate_id||''}</td>
+          <td>${r.variety||''}</td>
+          <td>${r.block||''}</td>
+          <td>${r.size}</td>
+          <td>${r.punnets_total}</td>
+          <td>${fmtKg(r.kg)}</td>
+          <td class="muted" title="${(r.scan_raw||'').replace(/"/g,'&quot;')}">${(r.scan_raw||'').slice(0,20)}</td>
+        `;
+        recordsTableBody.appendChild(tr);
+      });
+    }
+
+    // Export CSV
+    $('exportCSVBtn').onclick = ()=>{
+      const cols = ['timestamp','picker_id','crate_id','variety','block','size','punnets_per_crate','crate_qty','is_partial','manual_punnets','punnets_total','punnet_weight_g','kg','scan_raw'];
+      const all = getRecords();
+      const filt = dateFilter.value || 'today';
+      const rows = all.filter(r => withinFilter(r.timestamp, filt));
+
+      const header = cols.join(',');
+      const body = rows.map(r => cols.map(c => {
+        const v = (r[c]===undefined || r[c]===null) ? '' : String(r[c]);
+        // escape commas/quotes/newlines
+        if (/[,"\n]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
+        return v;
+      }).join(','));
+      const csv = [header, ...body].join('\n');
+
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `harvest_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
     };
 
-    function getPunnetSettings(){
-      const saved = localStorage.getItem('punnetSettings');
-      return saved ? JSON.parse(saved) : { ...defaultPunnetSettings };
-    }
-    function setPunnetSettings(obj){
-      localStorage.setItem('punnetSettings', JSON.stringify(obj));
-    }
+    // Clear all
+    $('clearAllBtn').onclick = ()=>{
+      if(confirm('Clear ALL saved records on this device?')){
+        setRecords([]);
+        renderRecords();
+      }
+    };
 
-    function loadSettingsIntoForm(){
-      const s = getPunnetSettings();
-      $('smallPunnets').value = s.Small.punnetsPerCrate;
-      $('smallWeight').value  = s.Small.punnetWeightG;
-      $('mediumPunnets').value = s.Medium.punnetsPerCrate;
-      $('mediumWeight').value  = s.Medium.punnetWeightG;
-      $('largePunnets').value = s.Large.punnetsPerCrate;
-      $('largeWeight').value  = s.Large.punnetWeightG;
-    }
-
-    function saveSettingsFromForm(){
-      const s = {
-        Small:  { punnetsPerCrate: parseInt($('smallPunnets').value || '0', 10), punnetWeightG: parseInt($('smallWeight').value  || '0', 10) },
-        Medium: { punnetsPerCrate: parseInt($('mediumPunnets').value|| '0', 10), punnetWeightG: parseInt($('mediumWeight').value|| '0', 10) },
-        Large:  { punnetsPerCrate: parseInt($('largePunnets').value || '0', 10), punnetWeightG: parseInt($('largeWeight').value || '0', 10) }
-      };
-      setPunnetSettings(s);
-      alert('✅ Settings saved!');
-    }
-
-    $('saveSettingsBtn').addEventListener('click', saveSettingsFromForm);
-
-    // Start on scanner screen
-    showScanner();
+    // Start on Scanner page
+    show('scanner');
   })();
   </script>
 </body>
