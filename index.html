@@ -4,27 +4,31 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Berry Harvest Scanner</title>
+  <!-- ZXing for barcode/QR scanning -->
   <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { margin: 0 0 10px 0; }
+    .topbar { margin-bottom: 12px; display:flex; gap:8px; flex-wrap:wrap; }
+    button { padding: 8px 12px; cursor: pointer; }
     video { width: 100%; max-width: 420px; border: 1px solid #ccc; border-radius: 8px; }
     #log { white-space: pre-wrap; background:#f8f8ff; border:1px solid #ddd; padding:10px; max-width: 720px; }
-    .row { margin-bottom: 10px; }
+    .row { display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
     table { border-collapse: collapse; margin-top: 10px; }
     th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: center; }
-    button { margin: 5px; padding: 8px 12px; }
+    .hidden { display:none; }
   </style>
 </head>
 <body>
   <h1>🍓 Berry Harvest Scanner</h1>
 
-  <!-- Buttons to switch screens -->
-  <div style="margin-bottom:10px;">
-    <button onclick="showScanner()">📷 Scanner</button>
-    <button onclick="showSettings()">⚙️ Settings</button>
+  <!-- Top navigation -->
+  <div class="topbar">
+    <button id="btnScanner">📷 Scanner</button>
+    <button id="btnSettings">⚙️ Settings</button>
   </div>
 
-  <!-- Scanner Screen -->
+  <!-- ========== Scanner Screen ========== -->
   <div id="scannerScreen">
     <div class="row">
       <label for="cameraSelect">Camera:</label>
@@ -41,10 +45,10 @@
     <div id="log">Ready…</div>
   </div>
 
-  <!-- Settings Screen -->
-  <div id="settingsScreen" style="display:none; margin-top:20px; border:1px solid #ccc; padding:10px; border-radius:8px;">
+  <!-- ========== Settings Screen ========== -->
+  <div id="settingsScreen" class="hidden" style="margin-top:20px; border:1px solid #ccc; padding:10px; border-radius:8px;">
     <h2>⚙️ Punnet Settings</h2>
-    <p>Change the number of punnets per crate and the weight per punnet (grams).</p>
+    <p>Change the number of punnets per crate and the weight per punnet (grams). These values are saved on this device.</p>
     
     <table>
       <thead>
@@ -73,16 +77,40 @@
       </tbody>
     </table>
 
-    <button onclick="saveSettings()" style="margin-top:10px;">💾 Save Settings</button>
+    <button id="saveSettingsBtn" style="margin-top:10px;">💾 Save Settings</button>
   </div>
 
   <script>
-    // ------------------ Scanner ------------------
-    const logEl = document.getElementById('log');
-    const lastScanEl = document.getElementById('lastScan');
-    const cameraSelect = document.getElementById('cameraSelect');
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn  = document.getElementById('stopBtn');
+  // Wrap everything so we don't leak variables
+  (function(){
+    // ----------- UI helpers -----------
+    const $ = (id) => document.getElementById(id);
+    const scannerScreen  = $('scannerScreen');
+    const settingsScreen = $('settingsScreen');
+    const btnScanner  = $('btnScanner');
+    const btnSettings = $('btnSettings');
+
+    function showScanner(){
+      settingsScreen.classList.add('hidden');
+      scannerScreen.classList.remove('hidden');
+    }
+    function showSettings(){
+      stopScanner();          // stop camera while on settings
+      loadSettingsIntoForm(); // populate inputs
+      scannerScreen.classList.add('hidden');
+      settingsScreen.classList.remove('hidden');
+    }
+
+    // Bind buttons (no inline handlers)
+    btnScanner.addEventListener('click', showScanner);
+    btnSettings.addEventListener('click', showSettings);
+
+    // ----------- Scanner -----------
+    const logEl = $('log');
+    const lastScanEl = $('lastScan');
+    const cameraSelect = $('cameraSelect');
+    const startBtn = $('startBtn');
+    const stopBtn  = $('stopBtn');
 
     function log(msg){ logEl.textContent += '\\n' + msg; }
     function setButtons(scanning){
@@ -103,9 +131,7 @@
           opt.textContent = d.label || `camera ${i+1}`;
           cameraSelect.appendChild(opt);
         });
-        if (devices.length === 0) {
-          log('No cameras found. Check browser permission settings.');
-        }
+        if (devices.length === 0) log('No cameras found. Check browser camera permission.');
       } catch (e) {
         log('Error listing cameras: ' + e.message);
       }
@@ -145,58 +171,56 @@
       }
     }
 
-    // Init scanner
+    startBtn.addEventListener('click', startScanner);
+    stopBtn.addEventListener('click',  stopScanner);
+
+    // On page load, prep camera list
     (async ()=>{
       await listCameras();
       log('If the camera list is empty, tap Start, accept the camera permission, then reload.');
     })();
 
-    startBtn.onclick = startScanner;
-    stopBtn.onclick  = stopScanner;
-
-    // ------------------ Settings ------------------
-    let punnetSettings = {
-      Small: { punnetsPerCrate: 32, punnetWeightG: 250 },
+    // ----------- Settings storage -----------
+    // Default values in case nothing is saved yet
+    const defaultPunnetSettings = {
+      Small:  { punnetsPerCrate: 32, punnetWeightG: 250 },
       Medium: { punnetsPerCrate: 20, punnetWeightG: 400 },
-      Large: { punnetsPerCrate: 8,  punnetWeightG: 800 }
+      Large:  { punnetsPerCrate: 8,  punnetWeightG: 800 }
     };
 
-    function loadSettings() {
+    function getPunnetSettings(){
       const saved = localStorage.getItem('punnetSettings');
-      if (saved) {
-        punnetSettings = JSON.parse(saved);
-      }
-      document.getElementById('smallPunnets').value = punnetSettings.Small.punnetsPerCrate;
-      document.getElementById('smallWeight').value  = punnetSettings.Small.punnetWeightG;
-      document.getElementById('mediumPunnets').value = punnetSettings.Medium.punnetsPerCrate;
-      document.getElementById('mediumWeight').value  = punnetSettings.Medium.punnetWeightG;
-      document.getElementById('largePunnets').value = punnetSettings.Large.punnetsPerCrate;
-      document.getElementById('largeWeight').value  = punnetSettings.Large.punnetWeightG;
+      return saved ? JSON.parse(saved) : { ...defaultPunnetSettings };
+    }
+    function setPunnetSettings(obj){
+      localStorage.setItem('punnetSettings', JSON.stringify(obj));
     }
 
-    function saveSettings() {
-      punnetSettings.Small.punnetsPerCrate = parseInt(document.getElementById('smallPunnets').value);
-      punnetSettings.Small.punnetWeightG   = parseInt(document.getElementById('smallWeight').value);
-      punnetSettings.Medium.punnetsPerCrate = parseInt(document.getElementById('mediumPunnets').value);
-      punnetSettings.Medium.punnetWeightG   = parseInt(document.getElementById('mediumWeight').value);
-      punnetSettings.Large.punnetsPerCrate = parseInt(document.getElementById('largePunnets').value);
-      punnetSettings.Large.punnetWeightG   = parseInt(document.getElementById('largeWeight').value);
+    function loadSettingsIntoForm(){
+      const s = getPunnetSettings();
+      $('smallPunnets').value = s.Small.punnetsPerCrate;
+      $('smallWeight').value  = s.Small.punnetWeightG;
+      $('mediumPunnets').value = s.Medium.punnetsPerCrate;
+      $('mediumWeight').value  = s.Medium.punnetWeightG;
+      $('largePunnets').value = s.Large.punnetsPerCrate;
+      $('largeWeight').value  = s.Large.punnetWeightG;
+    }
 
-      localStorage.setItem('punnetSettings', JSON.stringify(punnetSettings));
+    function saveSettingsFromForm(){
+      const s = {
+        Small:  { punnetsPerCrate: parseInt($('smallPunnets').value || '0', 10), punnetWeightG: parseInt($('smallWeight').value  || '0', 10) },
+        Medium: { punnetsPerCrate: parseInt($('mediumPunnets').value|| '0', 10), punnetWeightG: parseInt($('mediumWeight').value|| '0', 10) },
+        Large:  { punnetsPerCrate: parseInt($('largePunnets').value || '0', 10), punnetWeightG: parseInt($('largeWeight').value || '0', 10) }
+      };
+      setPunnetSettings(s);
       alert('✅ Settings saved!');
     }
 
-    function showSettings() {
-      document.getElementById('settingsScreen').style.display = 'block';
-      document.getElementById('scannerScreen').style.display = 'none';
-      stopScanner();
-      loadSettings();
-    }
+    $('saveSettingsBtn').addEventListener('click', saveSettingsFromForm);
 
-    function showScanner() {
-      document.getElementById('settingsScreen').style.display = 'none';
-      document.getElementById('scannerScreen').style.display = 'block';
-    }
+    // Start on scanner screen
+    showScanner();
+  })();
   </script>
 </body>
 </html>
