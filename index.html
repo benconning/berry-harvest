@@ -107,5 +107,45 @@
     startBtn.onclick = startScanner;
     stopBtn.onclick  = stopScanner;
   </script>
+  <!-- Settings Screen -->
+<div id="settingsScreen" style="display:none; margin-top:20px; border:1px solid #ccc; padding:10px; border-radius:8px;">
+  <h2>⚙️ Punnet Settings</h2>
+  <p>Change the number of punnets per crate and the weight per punnet (grams).</p>
+  
+  <table border="1" cellpadding="6" style="border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th>Size</th>
+        <th>Punnets per Crate</th>
+        <th>Punnet Weight (g)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Small</td>
+        <td><input id="smallPunnets" type="number" value="32" /></td>
+        <td><input id="smallWeight" type="number" value="250" /></td>
+      </tr>
+      <tr>
+        <td>Medium</td>
+        <td><input id="mediumPunnets" type="number" value="20" /></td>
+        <td><input id="mediumWeight" type="number" value="400" /></td>
+      </tr>
+      <tr>
+        <td>Large</td>
+        <td><input id="largePunnets" type="number" value="8" /></td>
+        <td><input id="largeWeight" type="number" value="800" /></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <button onclick="saveSettings()" style="margin-top:10px;">💾 Save Settings</button>
+</div>
+
+<!-- Buttons to switch screens -->
+<div style="margin-top:10px;">
+  <button onclick="showScanner()">📷 Scanner</button>
+  <button onclick="showSettings()">⚙️ Settings</button>
+</div>
 </body>
 </html>
