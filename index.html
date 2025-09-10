@@ -3,34 +3,81 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Scanner Test</title>
+  <title>Berry Harvest Scanner</title>
   <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
   <style>
-    body { font-family: system-ui, Arial; margin: 16px; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
     video { width: 100%; max-width: 420px; border: 1px solid #ccc; border-radius: 8px; }
-    select, button { padding: 8px 10px; margin-right: 8px; }
     #log { white-space: pre-wrap; background:#f8f8ff; border:1px solid #ddd; padding:10px; max-width: 720px; }
-    .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; }
+    .row { margin-bottom: 10px; }
+    table { border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: center; }
+    button { margin: 5px; padding: 8px 12px; }
   </style>
 </head>
 <body>
-  <h1>ZXing Scanner Test</h1>
+  <h1>🍓 Berry Harvest Scanner</h1>
 
-  <div class="row">
-    <label for="cameraSelect">Camera:</label>
-    <select id="cameraSelect"></select>
-    <button id="startBtn">Start Scanner</button>
-    <button id="stopBtn" disabled>Stop</button>
+  <!-- Buttons to switch screens -->
+  <div style="margin-bottom:10px;">
+    <button onclick="showScanner()">📷 Scanner</button>
+    <button onclick="showSettings()">⚙️ Settings</button>
   </div>
 
-  <video id="preview" autoplay muted playsinline></video>
+  <!-- Scanner Screen -->
+  <div id="scannerScreen">
+    <div class="row">
+      <label for="cameraSelect">Camera:</label>
+      <select id="cameraSelect"></select>
+      <button id="startBtn">Start Scanner</button>
+      <button id="stopBtn" disabled>Stop</button>
+    </div>
 
-  <p><strong>Last scan:</strong> <span id="lastScan">—</span></p>
+    <video id="preview" autoplay muted playsinline></video>
 
-  <h3>Log</h3>
-  <div id="log">Ready…</div>
+    <p><strong>Last scan:</strong> <span id="lastScan">—</span></p>
+
+    <h3>Log</h3>
+    <div id="log">Ready…</div>
+  </div>
+
+  <!-- Settings Screen -->
+  <div id="settingsScreen" style="display:none; margin-top:20px; border:1px solid #ccc; padding:10px; border-radius:8px;">
+    <h2>⚙️ Punnet Settings</h2>
+    <p>Change the number of punnets per crate and the weight per punnet (grams).</p>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Size</th>
+          <th>Punnets per Crate</th>
+          <th>Punnet Weight (g)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Small</td>
+          <td><input id="smallPunnets" type="number" value="32" /></td>
+          <td><input id="smallWeight" type="number" value="250" /></td>
+        </tr>
+        <tr>
+          <td>Medium</td>
+          <td><input id="mediumPunnets" type="number" value="20" /></td>
+          <td><input id="mediumWeight" type="number" value="400" /></td>
+        </tr>
+        <tr>
+          <td>Large</td>
+          <td><input id="largePunnets" type="number" value="8" /></td>
+          <td><input id="largeWeight" type="number" value="800" /></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button onclick="saveSettings()" style="margin-top:10px;">💾 Save Settings</button>
+  </div>
 
   <script>
+    // ------------------ Scanner ------------------
     const logEl = document.getElementById('log');
     const lastScanEl = document.getElementById('lastScan');
     const cameraSelect = document.getElementById('cameraSelect');
@@ -98,7 +145,7 @@
       }
     }
 
-    // Init
+    // Init scanner
     (async ()=>{
       await listCameras();
       log('If the camera list is empty, tap Start, accept the camera permission, then reload.');
@@ -106,46 +153,50 @@
 
     startBtn.onclick = startScanner;
     stopBtn.onclick  = stopScanner;
+
+    // ------------------ Settings ------------------
+    let punnetSettings = {
+      Small: { punnetsPerCrate: 32, punnetWeightG: 250 },
+      Medium: { punnetsPerCrate: 20, punnetWeightG: 400 },
+      Large: { punnetsPerCrate: 8,  punnetWeightG: 800 }
+    };
+
+    function loadSettings() {
+      const saved = localStorage.getItem('punnetSettings');
+      if (saved) {
+        punnetSettings = JSON.parse(saved);
+      }
+      document.getElementById('smallPunnets').value = punnetSettings.Small.punnetsPerCrate;
+      document.getElementById('smallWeight').value  = punnetSettings.Small.punnetWeightG;
+      document.getElementById('mediumPunnets').value = punnetSettings.Medium.punnetsPerCrate;
+      document.getElementById('mediumWeight').value  = punnetSettings.Medium.punnetWeightG;
+      document.getElementById('largePunnets').value = punnetSettings.Large.punnetsPerCrate;
+      document.getElementById('largeWeight').value  = punnetSettings.Large.punnetWeightG;
+    }
+
+    function saveSettings() {
+      punnetSettings.Small.punnetsPerCrate = parseInt(document.getElementById('smallPunnets').value);
+      punnetSettings.Small.punnetWeightG   = parseInt(document.getElementById('smallWeight').value);
+      punnetSettings.Medium.punnetsPerCrate = parseInt(document.getElementById('mediumPunnets').value);
+      punnetSettings.Medium.punnetWeightG   = parseInt(document.getElementById('mediumWeight').value);
+      punnetSettings.Large.punnetsPerCrate = parseInt(document.getElementById('largePunnets').value);
+      punnetSettings.Large.punnetWeightG   = parseInt(document.getElementById('largeWeight').value);
+
+      localStorage.setItem('punnetSettings', JSON.stringify(punnetSettings));
+      alert('✅ Settings saved!');
+    }
+
+    function showSettings() {
+      document.getElementById('settingsScreen').style.display = 'block';
+      document.getElementById('scannerScreen').style.display = 'none';
+      stopScanner();
+      loadSettings();
+    }
+
+    function showScanner() {
+      document.getElementById('settingsScreen').style.display = 'none';
+      document.getElementById('scannerScreen').style.display = 'block';
+    }
   </script>
-  <!-- Settings Screen -->
-<div id="settingsScreen" style="display:none; margin-top:20px; border:1px solid #ccc; padding:10px; border-radius:8px;">
-  <h2>⚙️ Punnet Settings</h2>
-  <p>Change the number of punnets per crate and the weight per punnet (grams).</p>
-  
-  <table border="1" cellpadding="6" style="border-collapse:collapse;">
-    <thead>
-      <tr>
-        <th>Size</th>
-        <th>Punnets per Crate</th>
-        <th>Punnet Weight (g)</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Small</td>
-        <td><input id="smallPunnets" type="number" value="32" /></td>
-        <td><input id="smallWeight" type="number" value="250" /></td>
-      </tr>
-      <tr>
-        <td>Medium</td>
-        <td><input id="mediumPunnets" type="number" value="20" /></td>
-        <td><input id="mediumWeight" type="number" value="400" /></td>
-      </tr>
-      <tr>
-        <td>Large</td>
-        <td><input id="largePunnets" type="number" value="8" /></td>
-        <td><input id="largeWeight" type="number" value="800" /></td>
-      </tr>
-    </tbody>
-  </table>
-
-  <button onclick="saveSettings()" style="margin-top:10px;">💾 Save Settings</button>
-</div>
-
-<!-- Buttons to switch screens -->
-<div style="margin-top:10px;">
-  <button onclick="showScanner()">📷 Scanner</button>
-  <button onclick="showSettings()">⚙️ Settings</button>
-</div>
 </body>
 </html>
