@@ -9,9 +9,9 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     h1 { margin: 0 0 10px 0; }
-    .topbar { margin-bottom: 12px; display:flex; gap:8px; flex-wrap:wrap; }
+    .topbar { margin-bottom: 12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
     button { padding: 8px 12px; cursor: pointer; }
-    select, input { padding: 6px 8px; }
+    select, input, textarea { padding: 6px 8px; }
     video { width: 100%; max-width: 460px; border: 1px solid #ccc; border-radius: 8px; }
     .row { display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
     .card { border:1px solid #ddd; border-radius:8px; padding:10px; margin-top:10px; }
@@ -21,6 +21,9 @@
     .hidden { display:none; }
     .pill { border:1px solid #ccc; padding:4px 8px; border-radius:999px; background:#f7f7ff; }
     .muted { color:#666; font-size: 13px; }
+    .status { font-size:12px; color:#444; }
+    textarea { width: 100%; min-height: 90px; }
+    .spacer { flex:1 1 auto; }
   </style>
 </head>
 <body>
@@ -28,9 +31,10 @@
 
   <!-- Top navigation -->
   <div class="topbar">
-    <button id="btnScanner">📷 Scanner</button>
-    <button id="btnRecords">📄 Records</button>
-    <button id="btnSettings">⚙️ Settings</button>
+    <button id="btnScanner"  onclick="goScanner()">📷 Scanner</button>
+    <button id="btnRecords"  onclick="goRecords()">📄 Records</button>
+    <button id="btnSettings" onclick="goSettings()">⚙️ Settings</button>
+    <span id="appStatus" class="status">Status: loading…</span>
   </div>
 
   <!-- ========== Scanner Screen ========== -->
@@ -41,17 +45,11 @@
         <label>Variety:
           <select id="varietySelect">
             <option value="">-- choose --</option>
-            <option>Albion</option>
-            <option>Camarosa</option>
-            <option>Ventana</option>
           </select>
         </label>
         <label>Block:
           <select id="blockSelect">
             <option value="">-- choose --</option>
-            <option>GH1-R01</option>
-            <option>GH2-R12</option>
-            <option>Block 5</option>
           </select>
         </label>
         <label>Size:
@@ -72,7 +70,9 @@
         <select id="cameraSelect"></select>
         <button id="startBtn">Start</button>
         <button id="stopBtn" disabled>Stop</button>
-        <span class="pill" id="batchCount">Batch: 0 crates</span>
+        <span class="pill" id="batchCount">Batch #<span id="batchIdLabel">1</span>: 0 crates</span>
+        <span class="spacer"></span>
+        <button id="completeBatchBtn" title="Finish this batch and start a new one">✅ Complete Batch</button>
       </div>
 
       <video id="preview" autoplay muted playsinline></video>
@@ -85,7 +85,13 @@
         <span class="muted">Use this only if the crate isn't full.</span>
       </div>
 
-      <p><strong>Last scan:</strong> <span id="lastScan">—</span></p>
+      <p><strong>Pending scan:</strong> <span id="lastScan">—</span></p>
+      <div class="row" id="captureRow" style="display:none">
+        <button id="captureBtn">✅ Capture</button>
+        <button id="rescanBtn">↻ Rescan</button>
+        <span class="muted">Scanner paused until you choose.</span>
+      </div>
+
       <div id="log" class="muted">Ready…</div>
     </div>
   </div>
@@ -122,6 +128,7 @@
               <th>Size</th>
               <th>Punnets</th>
               <th>Kg</th>
+              <th>Batch</th>
               <th>Source</th>
             </tr>
           </thead>
@@ -164,7 +171,23 @@
         </tbody>
       </table>
 
-      <button id="saveSettingsBtn" style="margin-top:10px;">💾 Save Settings</button>
+      <button id="saveSettingsBtn" style="margin-top:10px;">💾 Save Punnet Settings</button>
+    </div>
+
+    <div class="card">
+      <h2>📋 Master Lists</h2>
+      <p>Enter one per line. These lists feed the Scanner dropdowns.</p>
+      <div class="row">
+        <div style="flex:1 1 300px;">
+          <h3 style="margin:6px 0 6px;">Varieties</h3>
+          <textarea id="varietiesText"></textarea>
+        </div>
+        <div style="flex:1 1 300px;">
+          <h3 style="margin:6px 0 6px;">Blocks</h3>
+          <textarea id="blocksText"></textarea>
+        </div>
+      </div>
+      <button id="saveListsBtn">💾 Save Lists</button>
     </div>
   </div>
 
@@ -172,6 +195,7 @@
   (function(){
     // ----------------- Utilities -----------------
     const $ = (id) => document.getElementById(id);
+    const setStatus = (t)=> { const el = $('appStatus'); if (el) el.textContent = t; };
     const fmtKg = (n) => Number(n).toFixed(2);
     const nowISO = () => new Date().toISOString();
 
@@ -184,12 +208,13 @@
     function show(screen){
       Object.values(screens).forEach(s => s.classList.add('hidden'));
       screens[screen].classList.remove('hidden');
+      setStatus('Status: showing ' + screen);
     }
-    $('btnScanner').onclick = ()=> show('scanner');
-    $('btnRecords').onclick = ()=> { renderRecords(); show('records'); };
-    $('btnSettings').onclick = ()=> { stopScanner(); loadSettingsIntoForm(); show('settings'); };
+    window.goScanner = ()=> show('scanner');
+    window.goRecords = ()=> { renderRecords(); show('records'); };
+    window.goSettings = ()=> { stopScanner(); loadSettingsIntoForm(); loadListsIntoForm(); show('settings'); };
 
-    // ----------------- Settings (punnets/weights) -----------------
+    // ----------------- Punnet Settings -----------------
     const defaultPunnetSettings = {
       Small:  { punnetsPerCrate: 32, punnetWeightG: 250 },
       Medium: { punnetsPerCrate: 20, punnetWeightG: 400 },
@@ -218,10 +243,76 @@
         Large:  { punnetsPerCrate: parseInt($('largePunnets').value||'0',10),  punnetWeightG: parseInt($('largeWeight').value||'0',10) }
       };
       setPunnetSettings(s);
-      alert('✅ Settings saved!');
+      alert('✅ Punnet settings saved!');
     };
 
-    // ----------------- Sticky context (variety/block/size) -----------------
+    // ----------------- Master Lists (Varieties/Blocks) -----------------
+    const defaultVarieties = ['Albion','Camarosa','Ventana'];
+    const defaultBlocks = ['GH1-R01','GH2-R12','Block 5'];
+
+    function getVarieties(){
+      const raw = localStorage.getItem('varieties');
+      return raw ? JSON.parse(raw) : defaultVarieties.slice();
+    }
+    function setVarieties(list){
+      localStorage.setItem('varieties', JSON.stringify(list));
+    }
+    function getBlocks(){
+      const raw = localStorage.getItem('blocks');
+      return raw ? JSON.parse(raw) : defaultBlocks.slice();
+    }
+    function setBlocks(list){
+      localStorage.setItem('blocks', JSON.stringify(list));
+    }
+
+    function loadListsIntoForm(){
+      $('varietiesText').value = getVarieties().join('\\n');
+      $('blocksText').value = getBlocks().join('\\n');
+    }
+
+    function saveListsFromForm(){
+      const v = $('varietiesText').value.split(/\\r?\\n/).map(s=>s.trim()).filter(Boolean);
+      const b = $('blocksText').value.split(/\\r?\\n/).map(s=>s.trim()).filter(Boolean);
+      if (v.length === 0 || b.length === 0){
+        alert('Please enter at least one Variety and one Block.');
+        return;
+      }
+      setVarieties(v);
+      setBlocks(b);
+      populateVarietyBlockOptions(); // update scanner dropdowns
+      alert('✅ Master lists saved!');
+    }
+    $('saveListsBtn').onclick = saveListsFromForm;
+
+    function populateVarietyBlockOptions(){
+      const vlist = getVarieties();
+      const blist = getBlocks();
+      // Variety dropdown
+      const varietySelect = $('varietySelect');
+      const oldVar = varietySelect.value;
+      varietySelect.innerHTML = '<option value="">-- choose --</option>';
+      vlist.forEach(name=>{
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        varietySelect.appendChild(opt);
+      });
+      // Block dropdown
+      const blockSelect = $('blockSelect');
+      const oldBlock = blockSelect.value;
+      blockSelect.innerHTML = '<option value="">-- choose --</option>';
+      blist.forEach(name=>{
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        blockSelect.appendChild(opt);
+      });
+      // try to keep prior selection if still present
+      if (vlist.includes(oldVar)) varietySelect.value = oldVar;
+      if (blist.includes(oldBlock)) blockSelect.value = oldBlock;
+    }
+
+    // ----------------- Sticky context -----------------
     function loadContext(){
       try { return JSON.parse(localStorage.getItem('scanContext')||'{}'); } catch(e){ return {}; }
     }
@@ -232,14 +323,14 @@
     const blockSelect   = $('blockSelect');
     const sizeSelect    = $('sizeSelect');
 
-    // restore context
+    // init lists and restore context
+    populateVarietyBlockOptions();
     (()=>{
       const ctx = loadContext();
       if (ctx.variety) varietySelect.value = ctx.variety;
       if (ctx.block)   blockSelect.value = ctx.block;
       if (ctx.size)    sizeSelect.value = ctx.size;
     })();
-    // save on change
     [varietySelect,blockSelect,sizeSelect].forEach(el=>{
       el.addEventListener('change', ()=>{
         saveContext({ variety: varietySelect.value, block: blockSelect.value, size: sizeSelect.value });
@@ -254,23 +345,41 @@
       localStorage.setItem('harvestRecords', JSON.stringify(arr));
     }
 
+    // ----------------- Batch handling -----------------
+    function getCurrentBatchId(){
+      return parseInt(localStorage.getItem('currentBatchId') || '1', 10);
+    }
+    function setCurrentBatchId(n){
+      localStorage.setItem('currentBatchId', String(n));
+      $('batchIdLabel').textContent = n;
+    }
+    function completeBatch(){
+      const newId = getCurrentBatchId() + 1;
+      setCurrentBatchId(newId);
+      // reset on-screen count
+      batchCountEl.dataset.count = 0;
+      batchCountEl.textContent = `Batch #${newId}: 0 crates`;
+      alert(`✅ Batch completed. Now on Batch #${newId}.`);
+    }
+    $('completeBatchBtn').onclick = ()=> completeBatch();
+    // init batch label
+    setCurrentBatchId(getCurrentBatchId());
+
     // ----------------- QR Parsing -----------------
     function parseKV(text){
       const out = { raw: text||'' };
       if(!text) return out;
-      // Accept "key=value;key=value" or just plain IDs
       text.split(/[;,\n]/).forEach(pair=>{
         const [k,...rest] = pair.split('=');
         if(rest.length){
           out[k.trim().toLowerCase()] = rest.join('=').trim();
         }
       });
-      // Common fallbacks: if raw looks like P07, treat as picker
-      if (!out.picker && /^[A-Za-z]\d{2,}$/.test(out.raw||'')) out.picker = out.raw.trim();
+      if (!out.picker && /^[A-Za-z]\\d{2,}$/.test(out.raw||'')) out.picker = out.raw.trim();
       return out;
     }
 
-    // ----------------- Scanner -----------------
+    // ----------------- Scanner with Capture Button -----------------
     const logEl = $('log');
     const lastScanEl = $('lastScan');
     const cameraSelect = $('cameraSelect');
@@ -279,18 +388,21 @@
     const batchCountEl = $('batchCount');
     const partialToggle = $('partialToggle');
     const manualPunnets = $('manualPunnets');
+    const captureRow = $('captureRow');
+    const captureBtn = $('captureBtn');
+    const rescanBtn  = $('rescanBtn');
 
-    function log(msg){ logEl.textContent += '\\n' + msg; }
+    function log(msg){ if (logEl) logEl.textContent += '\\n' + msg; }
     function setButtons(scanning){
-      startBtn.disabled = scanning;
-      stopBtn.disabled  = !scanning;
+      if (startBtn) startBtn.disabled = scanning;
+      if (stopBtn)  stopBtn.disabled  = !scanning;
     }
 
-    partialToggle.onchange = ()=>{
-      manualPunnets.disabled = !partialToggle.checked;
-    };
+    partialToggle.onchange = ()=>{ manualPunnets.disabled = !partialToggle.checked; };
 
     let codeReader = null;
+    let pendingText = '';
+
     async function listCameras(){
       try {
         const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
@@ -307,18 +419,25 @@
         log('Error listing cameras: ' + e.message);
       }
     }
+
     async function startScanner(){
       try {
         setButtons(true);
+        captureRow.style.display = 'none';
+        pendingText = '';
+        lastScanEl.textContent = '—';
+
         if (codeReader) await codeReader.reset();
         codeReader = new ZXing.BrowserMultiFormatReader();
         const deviceId = cameraSelect.value || undefined;
 
-        await codeReader.decodeFromVideoDevice(deviceId, 'preview', (result, err) => {
+        await codeReader.decodeFromVideoDevice(deviceId, 'preview', async (result, err) => {
           if (result) {
-            const text = result.getText();
-            lastScanEl.textContent = text;
-            handleScan(text);
+            await pauseScanner();
+            pendingText = result.getText();
+            lastScanEl.textContent = pendingText;
+            captureRow.style.display = 'flex';
+            log('Detected QR — paused. Tap Capture to save or Rescan to try again.');
           } else if (err && !(err instanceof ZXing.NotFoundException)) {
             log('Decode error: ' + err);
           }
@@ -329,7 +448,21 @@
         setButtons(false);
       }
     }
+
+    async function pauseScanner(){
+      try {
+        if (codeReader) await codeReader.reset();
+      } catch(e){
+        log('Pause error: ' + e.message);
+      } finally {
+        setButtons(false);
+      }
+    }
+
     async function stopScanner(){
+      pendingText = '';
+      captureRow.style.display = 'none';
+      lastScanEl.textContent = '—';
       try {
         if (codeReader) await codeReader.reset();
         log('Scanner stopped.');
@@ -339,13 +472,27 @@
         setButtons(false);
       }
     }
+
     startBtn.onclick = startScanner;
     stopBtn.onclick  = stopScanner;
 
-    // Handle each scan: create and save a record
+    captureBtn.onclick = async ()=>{
+      if (!pendingText) return;
+      handleScan(pendingText);
+      pendingText = '';
+      captureRow.style.display = 'none';
+      await startScanner();
+    };
+
+    rescanBtn.onclick = async ()=>{
+      pendingText = '';
+      captureRow.style.display = 'none';
+      lastScanEl.textContent = '—';
+      await startScanner();
+    };
+
     function handleScan(rawText){
       const kv = parseKV(rawText);
-
       const ctx = loadContext();
       const size = ctx.size || 'Small';
       const variety = ctx.variety || '';
@@ -354,18 +501,15 @@
       const settings = getPunnetSettings();
       const sizeCfg = settings[size] || settings.Small;
 
-      // Decide punnets for this entry
       const isPartial = !!partialToggle.checked;
       const manual = parseInt(manualPunnets.value||'0',10);
       const punnets = isPartial ? Math.max(1, manual) : sizeCfg.punnetsPerCrate;
-
       const kg = (punnets * sizeCfg.punnetWeightG) / 1000;
 
-      // Build record
       const rec = {
         timestamp: nowISO(),
         picker_id: kv.picker || 'Unknown',
-        crate_id:  kv.crate || kv.crateid || '', // support crate or crateid
+        crate_id:  kv.crate || kv.crateid || '',
         variety: variety,
         block: block,
         size: size,
@@ -376,33 +520,29 @@
         punnets_total: punnets,
         punnet_weight_g: sizeCfg.punnetWeightG,
         kg: Number(kg.toFixed(3)),
+        batch_id: getCurrentBatchId(),
         scan_raw: rawText
       };
 
-      // Save
       const all = getRecords();
       all.push(rec);
       setRecords(all);
 
-      // UI counters
-      const batchCount = Number(batchCountEl.dataset.count || '0') + 1;
-      batchCountEl.dataset.count = batchCount;
-      batchCountEl.textContent = `Batch: ${batchCount} crates`;
+      const newCount = Number(batchCountEl.dataset.count || '0') + 1;
+      batchCountEl.dataset.count = newCount;
+      batchCountEl.textContent = `Batch #${getCurrentBatchId()}: ${newCount} crates`;
 
-      // Reset partial toggle for next scan
-      if (isPartial) {
-        partialToggle.checked = false;
-        manualPunnets.disabled = true;
-      }
+      if (isPartial) { partialToggle.checked = false; manualPunnets.disabled = true; }
 
-      // Log + toast
-      log(`Saved: ${rec.picker_id} • ${rec.size} • ${rec.punnets_total} punnets = ${rec.kg} kg`);
+      log(`Captured: [Batch #${rec.batch_id}] ${rec.picker_id} • ${rec.size} • ${rec.punnets_total} punnets = ${rec.kg} kg`);
     }
 
     // Prepare on load
     (async ()=>{
+      setStatus('Status: JS loaded, showing scanner');
       await listCameras();
-      log('If the camera list is empty, tap Start, accept the camera permission, then reload.');
+      show('scanner');
+      log('Tap Start, scan a code, then Capture/Rescan. Use ✅ Complete Batch to start a new batch number.');
     })();
 
     // ----------------- Records page -----------------
@@ -412,7 +552,7 @@
     const totalKg = $('totalKg');
     const recordsTableBody = $('recordsTable').querySelector('tbody');
 
-    dateFilter.onchange = ()=> renderRecords();
+    if (dateFilter) dateFilter.onchange = ()=> renderRecords();
 
     function withinFilter(ts, filterVal){
       const t = new Date(ts);
@@ -422,9 +562,9 @@
         const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         return t >= start;
       }
-      if (filterVal === '7'){ // last 7 days
+      if (filterVal === '7'){
         const start = new Date(now);
-        start.setDate(now.getDate() - 6); // inclusive today + 6 back
+        start.setDate(now.getDate() - 6);
         start.setHours(0,0,0,0);
         return t >= start;
       }
@@ -437,18 +577,16 @@
 
     function renderRecords(){
       const all = getRecords();
-      const filt = dateFilter.value || 'today';
+      const filt = (dateFilter && dateFilter.value) ? dateFilter.value : 'today';
       const rows = all.filter(r => withinFilter(r.timestamp, filt));
 
-      // totals
       const punnetsSum = rows.reduce((s,r)=> s + Number(r.punnets_total||0), 0);
       const kgSum = rows.reduce((s,r)=> s + Number(r.kg||0), 0);
 
-      rowsCount.textContent = rows.length;
-      totalPunnets.textContent = punnetsSum;
-      totalKg.textContent = fmtKg(kgSum);
+      if (rowsCount) rowsCount.textContent = rows.length;
+      if (totalPunnets) totalPunnets.textContent = punnetsSum;
+      if (totalKg) totalKg.textContent = fmtKg(kgSum);
 
-      // table
       recordsTableBody.innerHTML = '';
       rows.forEach(r=>{
         const tr = document.createElement('tr');
@@ -461,6 +599,7 @@
           <td>${r.size}</td>
           <td>${r.punnets_total}</td>
           <td>${fmtKg(r.kg)}</td>
+          <td>#${r.batch_id||''}</td>
           <td class="muted" title="${(r.scan_raw||'').replace(/"/g,'&quot;')}">${(r.scan_raw||'').slice(0,20)}</td>
         `;
         recordsTableBody.appendChild(tr);
@@ -469,7 +608,7 @@
 
     // Export CSV
     $('exportCSVBtn').onclick = ()=>{
-      const cols = ['timestamp','picker_id','crate_id','variety','block','size','punnets_per_crate','crate_qty','is_partial','manual_punnets','punnets_total','punnet_weight_g','kg','scan_raw'];
+      const cols = ['timestamp','picker_id','crate_id','variety','block','size','punnets_per_crate','crate_qty','is_partial','manual_punnets','punnets_total','punnet_weight_g','kg','batch_id','scan_raw'];
       const all = getRecords();
       const filt = dateFilter.value || 'today';
       const rows = all.filter(r => withinFilter(r.timestamp, filt));
@@ -477,7 +616,6 @@
       const header = cols.join(',');
       const body = rows.map(r => cols.map(c => {
         const v = (r[c]===undefined || r[c]===null) ? '' : String(r[c]);
-        // escape commas/quotes/newlines
         if (/[,"\n]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
         return v;
       }).join(','));
@@ -499,9 +637,6 @@
         renderRecords();
       }
     };
-
-    // Start on Scanner page
-    show('scanner');
   })();
   </script>
 </body>
