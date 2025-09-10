@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Berry Harvest</title>
-  <!-- ZXing for barcode/QR scanning -->
   <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
@@ -24,12 +23,13 @@
     .status { font-size:12px; color:#444; }
     textarea { width: 100%; min-height: 90px; }
     .spacer { flex:1 1 auto; }
+    .warn { color:#b00020; font-size: 13px; }
+    .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:18px; background:#14a34b; color:#fff; padding:10px 14px; border-radius:8px; display:none; }
   </style>
 </head>
 <body>
   <h1>🍓 Berry Harvest</h1>
 
-  <!-- Top navigation -->
   <div class="topbar">
     <button id="btnScanner"  onclick="goScanner()">📷 Scanner</button>
     <button id="btnRecords"  onclick="goRecords()">📄 Records</button>
@@ -43,24 +43,19 @@
       <strong>Context (sticky)</strong>
       <div class="row" style="margin-top:6px">
         <label>Variety:
-          <select id="varietySelect">
-            <option value="">-- choose --</option>
-          </select>
+          <select id="varietySelect"><option value="">-- choose --</option></select>
         </label>
         <label>Block:
-          <select id="blockSelect">
-            <option value="">-- choose --</option>
-          </select>
+          <select id="blockSelect"><option value="">-- choose --</option></select>
         </label>
         <label>Size:
           <select id="sizeSelect">
-            <option>Small</option>
-            <option>Medium</option>
-            <option>Large</option>
+            <option>Small</option><option>Medium</option><option>Large</option>
           </select>
         </label>
         <span class="muted">These stay until you change them.</span>
       </div>
+      <div id="ctxWarn" class="warn hidden">Please choose Variety, Block, and Size before capturing.</div>
     </div>
 
     <div class="card">
@@ -86,10 +81,10 @@
       </div>
 
       <p><strong>Pending scan:</strong> <span id="lastScan">—</span></p>
+      <div id="detectNote" class="muted hidden">Detected! Tap <strong>Capture</strong> to save, or <strong>Rescan</strong>.</div>
       <div class="row" id="captureRow" style="display:none">
         <button id="captureBtn">✅ Capture</button>
         <button id="rescanBtn">↻ Rescan</button>
-        <span class="muted">Scanner paused until you choose.</span>
       </div>
 
       <div id="log" class="muted">Ready…</div>
@@ -120,16 +115,8 @@
         <table id="recordsTable">
           <thead>
             <tr>
-              <th>Time</th>
-              <th>Picker</th>
-              <th>Crate</th>
-              <th>Variety</th>
-              <th>Block</th>
-              <th>Size</th>
-              <th>Punnets</th>
-              <th>Kg</th>
-              <th>Batch</th>
-              <th>Source</th>
+              <th>Time</th><th>Picker</th><th>Crate</th><th>Variety</th><th>Block</th>
+              <th>Size</th><th>Punnets</th><th>Kg</th><th>Batch</th><th>Source</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -143,34 +130,14 @@
     <div class="card">
       <h2>⚙️ Punnet Settings</h2>
       <p>Change the number of punnets per crate and the weight per punnet (grams). Saved on this device.</p>
-
       <table>
-        <thead>
-          <tr>
-            <th>Size</th>
-            <th>Punnets per Crate</th>
-            <th>Punnet Weight (g)</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Size</th><th>Punnets per Crate</th><th>Punnet Weight (g)</th></tr></thead>
         <tbody>
-          <tr>
-            <td>Small</td>
-            <td><input id="smallPunnets" type="number" value="32" /></td>
-            <td><input id="smallWeight" type="number" value="250" /></td>
-          </tr>
-          <tr>
-            <td>Medium</td>
-            <td><input id="mediumPunnets" type="number" value="20" /></td>
-            <td><input id="mediumWeight" type="number" value="400" /></td>
-          </tr>
-          <tr>
-            <td>Large</td>
-            <td><input id="largePunnets" type="number" value="8" /></td>
-            <td><input id="largeWeight" type="number" value="800" /></td>
-          </tr>
+          <tr><td>Small</td><td><input id="smallPunnets" type="number" value="32" /></td><td><input id="smallWeight" type="number" value="250" /></td></tr>
+          <tr><td>Medium</td><td><input id="mediumPunnets" type="number" value="20" /></td><td><input id="mediumWeight" type="number" value="400" /></td></tr>
+          <tr><td>Large</td><td><input id="largePunnets" type="number" value="8" /></td><td><input id="largeWeight" type="number" value="800" /></td></tr>
         </tbody>
       </table>
-
       <button id="saveSettingsBtn" style="margin-top:10px;">💾 Save Punnet Settings</button>
     </div>
 
@@ -191,318 +158,164 @@
     </div>
   </div>
 
+  <div id="toast" class="toast">Captured</div>
+
   <script>
   (function(){
-    // ----------------- Utilities -----------------
     const $ = (id) => document.getElementById(id);
     const setStatus = (t)=> { const el = $('appStatus'); if (el) el.textContent = t; };
     const fmtKg = (n) => Number(n).toFixed(2);
     const nowISO = () => new Date().toISOString();
-
-    // ----------------- Navigation -----------------
-    const screens = {
-      scanner: $('scannerScreen'),
-      records: $('recordsScreen'),
-      settings: $('settingsScreen')
-    };
-    function show(screen){
-      Object.values(screens).forEach(s => s.classList.add('hidden'));
-      screens[screen].classList.remove('hidden');
-      setStatus('Status: showing ' + screen);
-    }
+    const show = (screen)=>{ ['scanner','records','settings'].forEach(s=>$(s+'Screen').classList.add('hidden')); $(screen+'Screen').classList.remove('hidden'); setStatus('Status: showing '+screen); };
     window.goScanner = ()=> show('scanner');
     window.goRecords = ()=> { renderRecords(); show('records'); };
     window.goSettings = ()=> { stopScanner(); loadSettingsIntoForm(); loadListsIntoForm(); show('settings'); };
 
-    // ----------------- Punnet Settings -----------------
-    const defaultPunnetSettings = {
-      Small:  { punnetsPerCrate: 32, punnetWeightG: 250 },
-      Medium: { punnetsPerCrate: 20, punnetWeightG: 400 },
-      Large:  { punnetsPerCrate: 8,  punnetWeightG: 800 }
-    };
-    function getPunnetSettings(){
-      const saved = localStorage.getItem('punnetSettings');
-      return saved ? JSON.parse(saved) : { ...defaultPunnetSettings };
-    }
-    function setPunnetSettings(obj){
-      localStorage.setItem('punnetSettings', JSON.stringify(obj));
-    }
+    // Punnet settings
+    const defaultPunnetSettings = { Small:{punnetsPerCrate:32,punnetWeightG:250}, Medium:{punnetsPerCrate:20,punnetWeightG:400}, Large:{punnetsPerCrate:8,punnetWeightG:800} };
+    const getPunnetSettings = ()=> JSON.parse(localStorage.getItem('punnetSettings')||JSON.stringify(defaultPunnetSettings));
+    const setPunnetSettings = (o)=> localStorage.setItem('punnetSettings', JSON.stringify(o));
     function loadSettingsIntoForm(){
       const s = getPunnetSettings();
-      $('smallPunnets').value = s.Small.punnetsPerCrate;
-      $('smallWeight').value  = s.Small.punnetWeightG;
-      $('mediumPunnets').value = s.Medium.punnetsPerCrate;
-      $('mediumWeight').value  = s.Medium.punnetWeightG;
-      $('largePunnets').value = s.Large.punnetsPerCrate;
-      $('largeWeight').value  = s.Large.punnetWeightG;
+      $('smallPunnets').value = s.Small.punnetsPerCrate; $('smallWeight').value = s.Small.punnetWeightG;
+      $('mediumPunnets').value = s.Medium.punnetsPerCrate; $('mediumWeight').value = s.Medium.punnetWeightG;
+      $('largePunnets').value = s.Large.punnetsPerCrate; $('largeWeight').value = s.Large.punnetWeightG;
     }
     $('saveSettingsBtn').onclick = ()=>{
       const s = {
-        Small:  { punnetsPerCrate: parseInt($('smallPunnets').value||'0',10), punnetWeightG: parseInt($('smallWeight').value||'0',10) },
-        Medium: { punnetsPerCrate: parseInt($('mediumPunnets').value||'0',10), punnetWeightG: parseInt($('mediumWeight').value||'0',10) },
-        Large:  { punnetsPerCrate: parseInt($('largePunnets').value||'0',10),  punnetWeightG: parseInt($('largeWeight').value||'0',10) }
+        Small:{punnetsPerCrate:parseInt($('smallPunnets').value||'0',10),punnetWeightG:parseInt($('smallWeight').value||'0',10)},
+        Medium:{punnetsPerCrate:parseInt($('mediumPunnets').value||'0',10),punnetWeightG:parseInt($('mediumWeight').value||'0',10)},
+        Large:{punnetsPerCrate:parseInt($('largePunnets').value||'0',10),punnetWeightG:parseInt($('largeWeight').value||'0',10)}
       };
-      setPunnetSettings(s);
-      alert('✅ Punnet settings saved!');
+      setPunnetSettings(s); alert('✅ Punnet settings saved!');
     };
 
-    // ----------------- Master Lists (Varieties/Blocks) -----------------
+    // Master lists
     const defaultVarieties = ['Albion','Camarosa','Ventana'];
     const defaultBlocks = ['GH1-R01','GH2-R12','Block 5'];
-
-    function getVarieties(){
-      const raw = localStorage.getItem('varieties');
-      return raw ? JSON.parse(raw) : defaultVarieties.slice();
-    }
-    function setVarieties(list){
-      localStorage.setItem('varieties', JSON.stringify(list));
-    }
-    function getBlocks(){
-      const raw = localStorage.getItem('blocks');
-      return raw ? JSON.parse(raw) : defaultBlocks.slice();
-    }
-    function setBlocks(list){
-      localStorage.setItem('blocks', JSON.stringify(list));
-    }
-
-    function loadListsIntoForm(){
-      $('varietiesText').value = getVarieties().join('\\n');
-      $('blocksText').value = getBlocks().join('\\n');
-    }
-
-    function saveListsFromForm(){
+    const getVarieties = ()=> JSON.parse(localStorage.getItem('varieties')||JSON.stringify(defaultVarieties));
+    const setVarieties = (list)=> localStorage.setItem('varieties', JSON.stringify(list));
+    const getBlocks = ()=> JSON.parse(localStorage.getItem('blocks')||JSON.stringify(defaultBlocks));
+    const setBlocks = (list)=> localStorage.setItem('blocks', JSON.stringify(list));
+    function loadListsIntoForm(){ $('varietiesText').value = getVarieties().join('\\n'); $('blocksText').value = getBlocks().join('\\n'); }
+    $('saveListsBtn').onclick = ()=>{
       const v = $('varietiesText').value.split(/\\r?\\n/).map(s=>s.trim()).filter(Boolean);
       const b = $('blocksText').value.split(/\\r?\\n/).map(s=>s.trim()).filter(Boolean);
-      if (v.length === 0 || b.length === 0){
-        alert('Please enter at least one Variety and one Block.');
-        return;
-      }
-      setVarieties(v);
-      setBlocks(b);
-      populateVarietyBlockOptions(); // update scanner dropdowns
-      alert('✅ Master lists saved!');
-    }
-    $('saveListsBtn').onclick = saveListsFromForm;
-
+      if (!v.length || !b.length){ alert('Please enter at least one Variety and one Block.'); return; }
+      setVarieties(v); setBlocks(b); populateVarietyBlockOptions(); alert('✅ Master lists saved! Go back to Scanner to use them.');
+    };
     function populateVarietyBlockOptions(){
-      const vlist = getVarieties();
-      const blist = getBlocks();
-      // Variety dropdown
-      const varietySelect = $('varietySelect');
-      const oldVar = varietySelect.value;
-      varietySelect.innerHTML = '<option value="">-- choose --</option>';
-      vlist.forEach(name=>{
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        varietySelect.appendChild(opt);
-      });
-      // Block dropdown
-      const blockSelect = $('blockSelect');
-      const oldBlock = blockSelect.value;
-      blockSelect.innerHTML = '<option value="">-- choose --</option>';
-      blist.forEach(name=>{
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        blockSelect.appendChild(opt);
-      });
-      // try to keep prior selection if still present
-      if (vlist.includes(oldVar)) varietySelect.value = oldVar;
-      if (blist.includes(oldBlock)) blockSelect.value = oldBlock;
+      const vlist = getVarieties(), blist = getBlocks();
+      const vs = $('varietySelect'), bs = $('blockSelect');
+      const oldV = vs.value, oldB = bs.value;
+      vs.innerHTML = '<option value="">-- choose --</option>'; vlist.forEach(n=>{ const o=document.createElement('option'); o.value=n;o.textContent=n; vs.appendChild(o); });
+      bs.innerHTML = '<option value="">-- choose --</option>'; blist.forEach(n=>{ const o=document.createElement('option'); o.value=n;o.textContent=n; bs.appendChild(o); });
+      if (vlist.includes(oldV)) vs.value = oldV;
+      if (blist.includes(oldB)) bs.value = oldB;
     }
 
-    // ----------------- Sticky context -----------------
-    function loadContext(){
-      try { return JSON.parse(localStorage.getItem('scanContext')||'{}'); } catch(e){ return {}; }
-    }
-    function saveContext(ctx){
-      localStorage.setItem('scanContext', JSON.stringify(ctx));
-    }
-    const varietySelect = $('varietySelect');
-    const blockSelect   = $('blockSelect');
-    const sizeSelect    = $('sizeSelect');
-
-    // init lists and restore context
+    // Sticky context
+    const getCtx = ()=> JSON.parse(localStorage.getItem('scanContext')||'{}');
+    const setCtx = (o)=> localStorage.setItem('scanContext', JSON.stringify(o));
+    const varietySelect = $('varietySelect'), blockSelect = $('blockSelect'), sizeSelect = $('sizeSelect');
     populateVarietyBlockOptions();
-    (()=>{
-      const ctx = loadContext();
-      if (ctx.variety) varietySelect.value = ctx.variety;
-      if (ctx.block)   blockSelect.value = ctx.block;
-      if (ctx.size)    sizeSelect.value = ctx.size;
-    })();
-    [varietySelect,blockSelect,sizeSelect].forEach(el=>{
-      el.addEventListener('change', ()=>{
-        saveContext({ variety: varietySelect.value, block: blockSelect.value, size: sizeSelect.value });
-      });
-    });
+    (()=>{ const c=getCtx(); if (c.variety) varietySelect.value=c.variety; if (c.block) blockSelect.value=c.block; if (c.size) sizeSelect.value=c.size; })();
+    [varietySelect,blockSelect,sizeSelect].forEach(el=> el.addEventListener('change', ()=> setCtx({ variety:varietySelect.value, block:blockSelect.value, size:sizeSelect.value }) ));
 
-    // ----------------- Records store -----------------
-    function getRecords(){
-      try { return JSON.parse(localStorage.getItem('harvestRecords')||'[]'); } catch(e){ return []; }
-    }
-    function setRecords(arr){
-      localStorage.setItem('harvestRecords', JSON.stringify(arr));
-    }
+    // Records + batch
+    const getRecords = ()=> JSON.parse(localStorage.getItem('harvestRecords')||'[]');
+    const setRecords = (arr)=> localStorage.setItem('harvestRecords', JSON.stringify(arr));
+    const getBatchId = ()=> parseInt(localStorage.getItem('currentBatchId')||'1',10);
+    const setBatchId = (n)=> { localStorage.setItem('currentBatchId', String(n)); $('batchIdLabel').textContent = n; };
+    setBatchId(getBatchId());
+    $('completeBatchBtn').onclick = ()=>{ const n=getBatchId()+1; setBatchId(n); batchCountEl.dataset.count=0; batchCountEl.textContent=`Batch #${n}: 0 crates`; alert(`✅ Batch completed. Now on Batch #${n}.`); };
 
-    // ----------------- Batch handling -----------------
-    function getCurrentBatchId(){
-      return parseInt(localStorage.getItem('currentBatchId') || '1', 10);
-    }
-    function setCurrentBatchId(n){
-      localStorage.setItem('currentBatchId', String(n));
-      $('batchIdLabel').textContent = n;
-    }
-    function completeBatch(){
-      const newId = getCurrentBatchId() + 1;
-      setCurrentBatchId(newId);
-      // reset on-screen count
-      batchCountEl.dataset.count = 0;
-      batchCountEl.textContent = `Batch #${newId}: 0 crates`;
-      alert(`✅ Batch completed. Now on Batch #${newId}.`);
-    }
-    $('completeBatchBtn').onclick = ()=> completeBatch();
-    // init batch label
-    setCurrentBatchId(getCurrentBatchId());
-
-    // ----------------- QR Parsing -----------------
+    // QR parsing
     function parseKV(text){
       const out = { raw: text||'' };
       if(!text) return out;
       text.split(/[;,\n]/).forEach(pair=>{
         const [k,...rest] = pair.split('=');
-        if(rest.length){
-          out[k.trim().toLowerCase()] = rest.join('=').trim();
-        }
+        if(rest.length){ out[k.trim().toLowerCase()] = rest.join('=').trim(); }
       });
+      // fallback: if it's a simple token like P07, use as picker
       if (!out.picker && /^[A-Za-z]\\d{2,}$/.test(out.raw||'')) out.picker = out.raw.trim();
       return out;
     }
 
-    // ----------------- Scanner with Capture Button -----------------
-    const logEl = $('log');
-    const lastScanEl = $('lastScan');
-    const cameraSelect = $('cameraSelect');
-    const startBtn = $('startBtn');
-    const stopBtn  = $('stopBtn');
-    const batchCountEl = $('batchCount');
-    const partialToggle = $('partialToggle');
-    const manualPunnets = $('manualPunnets');
-    const captureRow = $('captureRow');
-    const captureBtn = $('captureBtn');
-    const rescanBtn  = $('rescanBtn');
+    // Scanner + capture
+    const logEl = $('log'), lastScanEl = $('lastScan'), detectNote = $('detectNote'), ctxWarn = $('ctxWarn');
+    const cameraSelect = $('cameraSelect'), startBtn=$('startBtn'), stopBtn=$('stopBtn');
+    const batchCountEl = $('batchCount'), partialToggle=$('partialToggle'), manualPunnets=$('manualPunnets');
+    const captureRow=$('captureRow'), captureBtn=$('captureBtn'), rescanBtn=$('rescanBtn'), toast=$('toast');
+    let codeReader = null, pendingText='';
 
     function log(msg){ if (logEl) logEl.textContent += '\\n' + msg; }
-    function setButtons(scanning){
-      if (startBtn) startBtn.disabled = scanning;
-      if (stopBtn)  stopBtn.disabled  = !scanning;
-    }
-
+    function setButtons(scanning){ if (startBtn) startBtn.disabled = scanning; if (stopBtn) stopBtn.disabled = !scanning; }
     partialToggle.onchange = ()=>{ manualPunnets.disabled = !partialToggle.checked; };
 
-    let codeReader = null;
-    let pendingText = '';
-
     async function listCameras(){
-      try {
+      try{
         const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
-        log('Found cameras: ' + devices.length);
         cameraSelect.innerHTML = '';
-        devices.forEach((d,i)=>{
-          const opt = document.createElement('option');
-          opt.value = d.deviceId;
-          opt.textContent = d.label || `camera ${i+1}`;
-          cameraSelect.appendChild(opt);
-        });
-        if (devices.length === 0) log('No cameras found. Check browser camera permission.');
-      } catch (e) {
-        log('Error listing cameras: ' + e.message);
-      }
+        devices.forEach((d,i)=>{ const o=document.createElement('option'); o.value=d.deviceId; o.textContent=d.label||`camera ${i+1}`; cameraSelect.appendChild(o); });
+        log('Found cameras: '+devices.length);
+        if (!devices.length) log('No cameras found. Check browser permission.');
+      }catch(e){ log('Error listing cameras: '+e.message); }
     }
 
     async function startScanner(){
-      try {
-        setButtons(true);
-        captureRow.style.display = 'none';
-        pendingText = '';
-        lastScanEl.textContent = '—';
-
+      try{
+        setButtons(true); pendingText=''; lastScanEl.textContent='—'; detectNote.classList.add('hidden'); captureRow.style.display='none'; ctxWarn.classList.add('hidden');
         if (codeReader) await codeReader.reset();
         codeReader = new ZXing.BrowserMultiFormatReader();
         const deviceId = cameraSelect.value || undefined;
-
         await codeReader.decodeFromVideoDevice(deviceId, 'preview', async (result, err) => {
           if (result) {
             await pauseScanner();
             pendingText = result.getText();
-            lastScanEl.textContent = pendingText;
+            lastScanEl.textContent = pendingText || '(empty)';
+            detectNote.classList.remove('hidden');
             captureRow.style.display = 'flex';
-            log('Detected QR — paused. Tap Capture to save or Rescan to try again.');
+            log('Detected QR — paused. Tap Capture to save or Rescan.');
           } else if (err && !(err instanceof ZXing.NotFoundException)) {
             log('Decode error: ' + err);
           }
         });
         log('Scanner started.');
-      } catch (e) {
-        log('Start error: ' + (e.message || e));
-        setButtons(false);
-      }
+      }catch(e){ log('Start error: '+(e.message||e)); setButtons(false); }
     }
-
-    async function pauseScanner(){
-      try {
-        if (codeReader) await codeReader.reset();
-      } catch(e){
-        log('Pause error: ' + e.message);
-      } finally {
-        setButtons(false);
-      }
-    }
-
-    async function stopScanner(){
-      pendingText = '';
-      captureRow.style.display = 'none';
-      lastScanEl.textContent = '—';
-      try {
-        if (codeReader) await codeReader.reset();
-        log('Scanner stopped.');
-      } catch(e){
-        log('Stop error: ' + e.message);
-      } finally {
-        setButtons(false);
-      }
-    }
-
-    startBtn.onclick = startScanner;
-    stopBtn.onclick  = stopScanner;
+    async function pauseScanner(){ try{ if (codeReader) await codeReader.reset(); }catch(e){ log('Pause error: '+e.message);} finally{ setButtons(false);} }
+    async function stopScanner(){ pendingText=''; captureRow.style.display='none'; lastScanEl.textContent='—'; detectNote.classList.add('hidden'); try{ if (codeReader) await codeReader.reset(); log('Scanner stopped.'); }catch(e){ log('Stop error: '+e.message);} finally{ setButtons(false);} }
+    startBtn.onclick = startScanner; stopBtn.onclick = stopScanner;
 
     captureBtn.onclick = async ()=>{
       if (!pendingText) return;
+      // require context
+      const ctx = getCtx();
+      const missing = (!ctx.variety || !ctx.block || !sizeSelect.value);
+      if (missing){
+        ctxWarn.classList.remove('hidden');
+        return;
+      }
       handleScan(pendingText);
-      pendingText = '';
-      captureRow.style.display = 'none';
-      await startScanner();
+      showToast('Captured');
+      pendingText=''; captureRow.style.display='none'; detectNote.classList.add('hidden');
+      await startScanner(); // resume
     };
+    rescanBtn.onclick = async ()=>{ pendingText=''; captureRow.style.display='none'; detectNote.classList.add('hidden'); lastScanEl.textContent='—'; await startScanner(); };
 
-    rescanBtn.onclick = async ()=>{
-      pendingText = '';
-      captureRow.style.display = 'none';
-      lastScanEl.textContent = '—';
-      await startScanner();
-    };
+    function showToast(msg){
+      toast.textContent = msg; toast.style.display='block';
+      setTimeout(()=> toast.style.display='none', 1000);
+    }
 
     function handleScan(rawText){
       const kv = parseKV(rawText);
-      const ctx = loadContext();
-      const size = ctx.size || 'Small';
-      const variety = ctx.variety || '';
-      const block   = ctx.block || '';
-
-      const settings = getPunnetSettings();
-      const sizeCfg = settings[size] || settings.Small;
-
-      const isPartial = !!partialToggle.checked;
-      const manual = parseInt(manualPunnets.value||'0',10);
+      const ctx = getCtx();
+      const size = ctx.size || 'Small', variety = ctx.variety || '', block = ctx.block || '';
+      const settings = getPunnetSettings(), sizeCfg = settings[size] || settings.Small;
+      const isPartial = !!partialToggle.checked, manual = parseInt(manualPunnets.value||'0',10);
       const punnets = isPartial ? Math.max(1, manual) : sizeCfg.punnetsPerCrate;
       const kg = (punnets * sizeCfg.punnetWeightG) / 1000;
 
@@ -510,9 +323,7 @@
         timestamp: nowISO(),
         picker_id: kv.picker || 'Unknown',
         crate_id:  kv.crate || kv.crateid || '',
-        variety: variety,
-        block: block,
-        size: size,
+        variety, block, size,
         punnets_per_crate: sizeCfg.punnetsPerCrate,
         is_partial: isPartial,
         manual_punnets: isPartial ? punnets : null,
@@ -520,77 +331,43 @@
         punnets_total: punnets,
         punnet_weight_g: sizeCfg.punnetWeightG,
         kg: Number(kg.toFixed(3)),
-        batch_id: getCurrentBatchId(),
+        batch_id: getBatchId(),
         scan_raw: rawText
       };
 
-      const all = getRecords();
-      all.push(rec);
-      setRecords(all);
+      const all = getRecords(); all.push(rec); setRecords(all);
 
       const newCount = Number(batchCountEl.dataset.count || '0') + 1;
       batchCountEl.dataset.count = newCount;
-      batchCountEl.textContent = `Batch #${getCurrentBatchId()}: ${newCount} crates`;
+      batchCountEl.textContent = `Batch #${getBatchId()}: ${newCount} crates`;
 
       if (isPartial) { partialToggle.checked = false; manualPunnets.disabled = true; }
 
       log(`Captured: [Batch #${rec.batch_id}] ${rec.picker_id} • ${rec.size} • ${rec.punnets_total} punnets = ${rec.kg} kg`);
     }
 
-    // Prepare on load
-    (async ()=>{
-      setStatus('Status: JS loaded, showing scanner');
-      await listCameras();
-      show('scanner');
-      log('Tap Start, scan a code, then Capture/Rescan. Use ✅ Complete Batch to start a new batch number.');
-    })();
-
-    // ----------------- Records page -----------------
-    const dateFilter = $('dateFilter');
-    const rowsCount = $('rowsCount');
-    const totalPunnets = $('totalPunnets');
-    const totalKg = $('totalKg');
+    // Records page
+    const dateFilter = $('dateFilter'), rowsCount=$('rowsCount'), totalPunnets=$('totalPunnets'), totalKg=$('totalKg');
     const recordsTableBody = $('recordsTable').querySelector('tbody');
-
     if (dateFilter) dateFilter.onchange = ()=> renderRecords();
-
     function withinFilter(ts, filterVal){
-      const t = new Date(ts);
-      const now = new Date();
-      if (filterVal === 'all') return true;
-      if (filterVal === 'today'){
-        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        return t >= start;
-      }
-      if (filterVal === '7'){
-        const start = new Date(now);
-        start.setDate(now.getDate() - 6);
-        start.setHours(0,0,0,0);
-        return t >= start;
-      }
-      if (filterVal === 'month'){
-        const start = new Date(now.getFullYear(), now.getMonth(), 1);
-        return t >= start;
-      }
+      const t = new Date(ts), now = new Date();
+      if (filterVal==='all') return true;
+      if (filterVal==='today'){ const start=new Date(now.getFullYear(),now.getMonth(),now.getDate()); return t>=start; }
+      if (filterVal==='7'){ const start=new Date(now); start.setDate(now.getDate()-6); start.setHours(0,0,0,0); return t>=start; }
+      if (filterVal==='month'){ const start=new Date(now.getFullYear(),now.getMonth(),1); return t>=start; }
       return true;
     }
-
     function renderRecords(){
-      const all = getRecords();
-      const filt = (dateFilter && dateFilter.value) ? dateFilter.value : 'today';
-      const rows = all.filter(r => withinFilter(r.timestamp, filt));
-
-      const punnetsSum = rows.reduce((s,r)=> s + Number(r.punnets_total||0), 0);
-      const kgSum = rows.reduce((s,r)=> s + Number(r.kg||0), 0);
-
-      if (rowsCount) rowsCount.textContent = rows.length;
-      if (totalPunnets) totalPunnets.textContent = punnetsSum;
-      if (totalKg) totalKg.textContent = fmtKg(kgSum);
-
-      recordsTableBody.innerHTML = '';
+      const all=getRecords(); const filt=(dateFilter&&dateFilter.value)||'today';
+      const rows=all.filter(r=>withinFilter(r.timestamp,filt));
+      const punnetsSum=rows.reduce((s,r)=>s+Number(r.punnets_total||0),0);
+      const kgSum=rows.reduce((s,r)=>s+Number(r.kg||0),0);
+      rowsCount.textContent=rows.length; totalPunnets.textContent=punnetsSum; totalKg.textContent=fmtKg(kgSum);
+      recordsTableBody.innerHTML='';
       rows.forEach(r=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
+        const tr=document.createElement('tr');
+        tr.innerHTML=`
           <td>${new Date(r.timestamp).toLocaleString()}</td>
           <td>${r.picker_id}</td>
           <td>${r.crate_id||''}</td>
@@ -600,43 +377,23 @@
           <td>${r.punnets_total}</td>
           <td>${fmtKg(r.kg)}</td>
           <td>#${r.batch_id||''}</td>
-          <td class="muted" title="${(r.scan_raw||'').replace(/"/g,'&quot;')}">${(r.scan_raw||'').slice(0,20)}</td>
-        `;
+          <td class="muted" title="${(r.scan_raw||'').replace(/"/g,'&quot;')}">${(r.scan_raw||'').slice(0,20)}</td>`;
         recordsTableBody.appendChild(tr);
       });
     }
 
-    // Export CSV
+    // Export / Clear
     $('exportCSVBtn').onclick = ()=>{
-      const cols = ['timestamp','picker_id','crate_id','variety','block','size','punnets_per_crate','crate_qty','is_partial','manual_punnets','punnets_total','punnet_weight_g','kg','batch_id','scan_raw'];
-      const all = getRecords();
-      const filt = dateFilter.value || 'today';
-      const rows = all.filter(r => withinFilter(r.timestamp, filt));
-
-      const header = cols.join(',');
-      const body = rows.map(r => cols.map(c => {
-        const v = (r[c]===undefined || r[c]===null) ? '' : String(r[c]);
-        if (/[,"\n]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
-        return v;
-      }).join(','));
-      const csv = [header, ...body].join('\n');
-
-      const blob = new Blob([csv], {type:'text/csv'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `harvest_${new Date().toISOString().slice(0,10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const cols=['timestamp','picker_id','crate_id','variety','block','size','punnets_per_crate','crate_qty','is_partial','manual_punnets','punnets_total','punnet_weight_g','kg','batch_id','scan_raw'];
+      const all=getRecords(); const filt=dateFilter.value||'today'; const rows=all.filter(r=>withinFilter(r.timestamp,filt));
+      const header=cols.join(','); const body=rows.map(r=>cols.map(c=>{ const v=(r[c]==null)?'':String(r[c]); return /[,"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }).join(','));
+      const csv=[header,...body].join('\n'); const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=`harvest_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
     };
+    $('clearAllBtn').onclick = ()=>{ if(confirm('Clear ALL saved records on this device?')){ setRecords([]); renderRecords(); } };
 
-    // Clear all
-    $('clearAllBtn').onclick = ()=>{
-      if(confirm('Clear ALL saved records on this device?')){
-        setRecords([]);
-        renderRecords();
-      }
-    };
+    // Init
+    (async ()=>{ setStatus('Status: JS loaded, showing scanner'); await listCameras(); show('scanner'); log('Tap Start → scan → Capture. Edit master lists in Settings; Scanner dropdowns update.'); })();
   })();
   </script>
 </body>
