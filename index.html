@@ -1,1 +1,39 @@
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
+<video id="preview" style="width:100%; max-width:400px; border:1px solid #ccc;" autoplay muted playsinline></video>
+<script>
+  // Create a ZXing reader
+  const codeReader = new ZXing.BrowserMultiFormatReader();
+
+  async function startScanner() {
+    try {
+      // List cameras
+      const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
+      console.log('Video devices:', devices);
+
+      // Pick the first camera (usually rear camera on phone)
+      const selectedDeviceId = devices[0].deviceId;
+
+      // Start decoding from that camera into our video element
+      codeReader.decodeFromVideoDevice(selectedDeviceId, 'preview', (result, err) => {
+        if (result) {
+          console.log('Scanned:', result.getText());
+          document.getElementById('lastScan').textContent = result.getText();
+        }
+        if (err && !(err instanceof ZXing.NotFoundException)) {
+          console.error(err);
+        }
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Stop scanner
+  async function stopScanner() {
+    await codeReader.reset();
+  }
+</script>
+<button onclick="startScanner()">Start Scanner</button>
+<button onclick="stopScanner()">Stop Scanner</button>
+<div id="lastScan">Nothing scanned yet.</div>
 
