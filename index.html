@@ -278,7 +278,25 @@
     const getBatchId = ()=> parseInt(localStorage.getItem('currentBatchId')||'1',10);
     const setBatchId = (n)=> { localStorage.setItem('currentBatchId', String(n)); $('batchIdLabel').textContent = n; };
     setBatchId(getBatchId());
-    $('completeBatchBtn').onclick = ()=>{ const n=getBatchId()+1; setBatchId(n); batchCountEl.dataset.count=0; batchCountEl.textContent=`Batch #${n}: 0 crates`; alert(`✅ Batch completed. Now on Batch #${n}.`); };
+   // init batch label
+setBatchId(getBatchId());
+
+document.getElementById('completeBatchBtn').onclick = () => {
+  const current = getBatchId();
+  const count = Number((document.getElementById('batchCount').dataset.count) || '0');
+
+  const ok = confirm(`Complete Batch #${current}? This will finalize ${count} crate(s) and start Batch #${current + 1}.`);
+  if (!ok) return;
+
+  const next = current + 1;
+  setBatchId(next);
+
+  // reset the visible counter
+  const batchCountEl = document.getElementById('batchCount');
+  batchCountEl.dataset.count = 0;
+  batchCountEl.textContent = `Batch #${next}: 0 crates`;
+};
+
 
     // ---------- QR parsing ----------
     function parseKV(text){
