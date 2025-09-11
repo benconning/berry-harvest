@@ -548,5 +548,277 @@
     (async ()=>{ setStatus('Status: JS loaded, showing scanner'); await listCameras(); show('scanner'); log('Tap Start → scan → Capture. Use Complete Batch to increment batch and reset counter.'); })();
   })();
   </script>
+  <!-- PATCH AREA START -->
+  // ============ UI Overhaul: Home → Strawberry → Scanner ============
+(function () {
+  // ----- helper -----
+  const $ = (id) => document.getElementById(id);
+
+  // 0) Add lightweight styles (brand colors to match your screenshot)
+  if (!document.getElementById('hotfixStyles')) {
+    const css = `
+:root{
+  --brand-green:#6f8747; /* header green */
+  --brand-blue:#bfe0f6;  /* pale blue btn fill */
+  --brand-blue-border:#5aa7d9; /* blue border */
+  --btn-text:#053a5d;
+  --danger:#e02020;
+}
+.headerbar{background:var(--brand-green);color:#fff;padding:8px 12px;font-size:22px;font-weight:600;border-radius:8px;margin-bottom:10px;display:flex;align-items:center;justify-content:center}
+.home-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:8px}
+.big-tile{background:#f0f2ec;border:1px solid #c8d0b8;border-radius:12px;padding:18px;font-size:18px;text-align:center;cursor:pointer}
+.big-tile:active{transform:scale(.99)}
+.row-center{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
+.pane{border:1px solid #d5dcd0;border-radius:12px;padding:12px;background:#f8faf7}
+.label{font-weight:600;margin-right:6px}
+.select-lg{font-size:18px;padding:10px 12px;border-radius:10px;border:1px solid #b8c4a3}
+.btn{border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;border:1px solid #bbb;background:#fff}
+.btn-blue{background:var(--brand-blue);border-color:var(--brand-blue-border);color:var(--btn-text)}
+.btn-red{background:#ffe5e5;border-color:#ff9b9b;color:#9b0d0d}
+.btn-green{background:#e6f3dc;border-color:#9dc98c;color:#2f5d1c}
+.sticky-footer{position:fixed;left:0;right:0;bottom:8px;display:flex;gap:10px;justify-content:center}
+.scan-overlay{position:fixed;inset:0;background:#000000c0;display:none;align-items:center;justify-content:center;z-index:9999;padding:12px}
+.scan-card{background:#fff;border-radius:16px;padding:12px;max-width:520px;width:100%}
+.scan-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.shutter-wrap{display:flex;align-items:center;justify-content:center;margin:8px 0}
+.shutter{width:72px;height:72px;border-radius:999px;border:6px solid #ccc;background:#fff;cursor:pointer}
+.shutter:active{transform:scale(.98)}
+.pill-batch{border:1px solid #bdc6d0;background:#f3f6fa;border-radius:999px;padding:4px 10px}
+.hide{display:none!important}
+.video-frame{width:100%;max-width:480px;border:1px solid #ccc;border-radius:12px;overflow:hidden}
+    `;
+    const style = document.createElement('style');
+    style.id = 'hotfixStyles';
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+
+  // 1) Hide old topbar; we’ll add our own Home UX
+  const topbar = document.querySelector('.topbar');
+  if (topbar) topbar.classList.add('hide');
+
+  // 2) Build Home screen
+  if (!$('homeScreen')) {
+    const home = document.createElement('div');
+    home.id = 'homeScreen';
+    home.innerHTML = `
+      <div class="headerbar">Market Garden Management System</div>
+      <div class="home-grid">
+        <div id="navStrawberry" class="big-tile">🍓 Strawberry</div>
+        <div id="navRecords" class="big-tile">📄 Records</div>
+        <div id="navSettings" class="big-tile">⚙️ Settings</div>
+      </div>
+    `;
+    document.body.insertBefore(home, document.body.firstChild);
+  }
+
+  // 3) Strawberry setup screen (variety, block, size)
+  if (!$('strawberryScreen')) {
+    const pane = document.createElement('div');
+    pane.id = 'strawberryScreen';
+    pane.className = 'pane hide';
+    pane.innerHTML = `
+      <div class="headerbar">🍓 Strawberry</div>
+      <div class="row-center" style="margin-bottom:12px">
+        <span class="label">Variety</span>
+        <select id="uiVariety" class="select-lg"><option value="">-- choose --</option></select>
+      </div>
+      <div class="row-center" style="margin-bottom:12px">
+        <span class="label">Block</span>
+        <select id="uiBlock" class="select-lg"><option value="">-- choose --</option></select>
+      </div>
+      <div class="row-center" style="margin-bottom:12px">
+        <span class="label">Size</span>
+        <select id="uiSize" class="select-lg">
+          <option>Small</option><option>Medium</option><option>Large</option>
+        </select>
+      </div>
+      <div class="row-center">
+        <button id="btnScanOpen" class="btn btn-blue">📷 Scan Crates</button>
+        <button id="btnBackHome1" class="btn">⬅️ Home</button>
+      </div>
+    `;
+    // place it after the new home
+    document.body.insertBefore(pane, $('homeScreen').nextSibling);
+  }
+
+  // 4) Minimal scanner overlay (re-uses your existing camera/ZXing + Capture flow)
+  if (!$('scanOverlay')) {
+    const ov = document.createElement('div');
+    ov.id = 'scanOverlay';
+    ov.className = 'scan-overlay';
+    ov.innerHTML = `
+      <div class="scan-card">
+        <div class="scan-header">
+          <div class="pill-batch" id="hotBatchLabel">Batch</div>
+          <button id="ovClose" class="btn">✖</button>
+        </div>
+        <div class="video-frame">
+          <!-- we show your existing <video id="preview"> inside the overlay -->
+          <!-- nothing to insert here; we temporarily move it in/out -->
+          <div id="videoMount" style="padding:6px;"></div>
+        </div>
+        <div class="shutter-wrap">
+          <button id="shutterBtn" class="shutter" title="Capture"></button>
+        </div>
+        <div class="row-center">
+          <button id="btnMoreCrates" class="btn btn-green">➕ More Crates</button>
+          <button id="btnCompleteBatch" class="btn btn-red">✅ Complete Batch</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(ov);
+  }
+
+  // 5) Wire navigation
+  function showHome(){ $('homeScreen').classList.remove('hide'); $('strawberryScreen').classList.add('hide'); $('scannerScreen').classList.add('hide'); $('recordsScreen').classList.add('hide'); $('settingsScreen').classList.add('hide'); }
+  function showStrawberry(){ $('homeScreen').classList.add('hide'); $('strawberryScreen').classList.remove('hide'); $('recordsScreen').classList.add('hide'); $('settingsScreen').classList.add('hide'); }
+  function showRecords(){ $('homeScreen').classList.add('hide'); $('strawberryScreen').classList.add('hide'); if (window.goRecords) goRecords(); $('recordsScreen').classList.remove('hide'); }
+  function showSettings(){ $('homeScreen').classList.add('hide'); $('strawberryScreen').classList.add('hide'); if (window.goSettings) goSettings(); $('settingsScreen').classList.remove('hide'); }
+
+  $('navStrawberry').onclick = showStrawberry;
+  $('navRecords').onclick   = showRecords;
+  $('navSettings').onclick  = showSettings;
+  $('btnBackHome1').onclick = showHome;
+
+  // 6) Feed the dropdowns from your master lists + sticky context
+  function normalizeList(input){
+    if (!input) return [];
+    try { if (Array.isArray(input)) return input; } catch {}
+    const txt = typeof input === 'string' ? input : JSON.stringify(input);
+    return txt.replace(/\\n/g,'\n').split(/[\r\n,]+/).map(s=>s.trim()).filter(Boolean);
+  }
+  function getList(key, fallback){ const raw=localStorage.getItem(key); return raw? normalizeList(JSON.parse(raw)): (fallback||[]); }
+  const defaultsV = ['Albion','Camarosa','Ventana'], defaultsB=['GH1-R01','GH2-R12','Block 5'];
+
+  function fillOptions(selId, arr, keepVal){
+    const sel = $(selId);
+    const old = keepVal ?? sel.value;
+    sel.innerHTML = '<option value="">-- choose --</option>' + arr.map(v=>`<option>${v}</option>`).join('');
+    if (arr.includes(old)) sel.value = old;
+  }
+  function refreshVB(){
+    fillOptions('uiVariety', getList('varieties', defaultsV));
+    fillOptions('uiBlock',   getList('blocks', defaultsB));
+  }
+  refreshVB();
+
+  // restore sticky context if present
+  try{
+    const ctx = JSON.parse(localStorage.getItem('scanContext')||'{}');
+    if (ctx.variety) $('uiVariety').value = ctx.variety;
+    if (ctx.block)   $('uiBlock').value   = ctx.block;
+    if (ctx.size)    $('uiSize').value    = ctx.size;
+  }catch{}
+
+  // keep sticky in sync (so existing code reads it)
+  ['uiVariety','uiBlock','uiSize'].forEach(id=>{
+    $(id).addEventListener('change', ()=>{
+      const ctx = {
+        variety: $('uiVariety').value,
+        block:   $('uiBlock').value,
+        size:    $('uiSize').value
+      };
+      localStorage.setItem('scanContext', JSON.stringify(ctx));
+    });
+  });
+
+  // 7) Scanner overlay: open/close and controls
+  const overlay = $('scanOverlay');
+  const videoMount = $('videoMount');
+
+  // we temporarily move the existing <video id="preview"> into the overlay
+  const preview = $('preview'); // from your original page
+  if (!preview) {
+    console.warn('Did not find #preview video element; open your Scanner once to create it.');
+  }
+
+  function openScannerOverlay(){
+    // validate choices
+    const ctx = JSON.parse(localStorage.getItem('scanContext')||'{}');
+    if (!ctx.variety || !ctx.block || !ctx.size){
+      alert('Please choose Variety, Block and Size first.'); return;
+    }
+
+    // show overlay
+    overlay.style.display = 'flex';
+    // update batch pill
+    try {
+      const id = parseInt(localStorage.getItem('currentBatchId')||'1',10);
+      $('hotBatchLabel').textContent = `Batch #${id}`;
+    } catch {}
+    // ensure the camera starts and the <video> is visible inside overlay
+    // move the video element into overlay mount
+    const frame = $('preview');
+    if (frame && frame.parentElement !== videoMount) {
+      videoMount.innerHTML = ''; // clear mount
+      videoMount.appendChild(frame);
+    }
+    // start scanner if not running
+    if (window.startScanner) startScanner();
+  }
+
+  function closeScannerOverlay(){
+    overlay.style.display = 'none';
+    // stop camera to save battery
+    if (window.stopScanner) stopScanner();
+    // Return to Strawberry screen (as requested)
+    showStrawberry();
+  }
+
+  $('btnScanOpen').onclick = openScannerOverlay;
+  $('ovClose').onclick = closeScannerOverlay;
+
+  // Shutter: acts like your Capture button (saves the detected code)
+  $('shutterBtn').onclick = function(){
+    const cap = document.getElementById('captureBtn');
+    if (cap) cap.click();
+  };
+
+  // More Crates: resumes scanning for next crate in same batch
+  $('btnMoreCrates').onclick = function(){
+    const rescan = document.getElementById('rescanBtn');
+    if (rescan) rescan.click();
+  };
+
+  // Complete Batch: confirmation -> bump id -> reset counter -> back to strawberry screen
+  $('btnCompleteBatch').onclick = function(){
+    try {
+      const batchCountEl = document.getElementById('batchCount');
+      const getBatchId = ()=> parseInt(localStorage.getItem('currentBatchId')||'1',10);
+      const setBatchId = (n)=>{ localStorage.setItem('currentBatchId', String(n));
+        const lab = document.getElementById('batchIdLabel'); if (lab) lab.textContent=n;
+      };
+      const current = getBatchId();
+      const count = Number((batchCountEl?.dataset.count)||'0');
+      if (!confirm(`Complete Batch #${current}? This will finalize ${count} crate(s) and start Batch #${current+1}.`)) return;
+
+      const next = current+1;
+      setBatchId(next);
+      if (batchCountEl){
+        batchCountEl.dataset.count = 0;
+        batchCountEl.textContent = `Batch #${next}: 0 crates`;
+      }
+      // close overlay and show strawberry screen
+      closeScannerOverlay();
+    } catch(e){
+      console.warn('CompleteBatch error', e);
+      closeScannerOverlay();
+    }
+  };
+
+  // 8) Start app on the Home screen
+  showHome();
+
+  // Bonus: keep Records/Settings nav working from header if needed
+  // (we already call goRecords/goSettings internally)
+})();
+
+<script id="hotfixes">
+// I'll paste only tiny code changes here from now on.
+  
+</script>
+<!-- PATCH AREA END -->
+
 </body>
 </html>
