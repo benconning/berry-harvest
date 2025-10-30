@@ -894,14 +894,23 @@
     <!-- Scanner Overlay -->
     <div class="scanner-overlay" id="scannerOverlay">
         <div class="scanner-header">
-            <div id="scanStatus">Ready to scan</div>
+            <span id="scannerBatchLabel">Batch #1</span>
             <button class="scanner-close" onclick="closeScanner()">✕</button>
         </div>
         <div class="scanner-content">
-            <video id="videoPreview" autoplay playsinline></video>
-            <canvas id="captureCanvas"></canvas>
+            <video id="preview"></video>
             <div class="scanner-controls">
-                <button id="captureBtn" onclick="captureImage()"></button>
+                <div class="scanner-status" id="scannerStatus">Initializing camera...</div>
+                <div class="partial-crate-container" style="display: flex; align-items: center; gap: 10px; margin: 10px 0;">
+                    <input type="checkbox" id="scannerPartialCrate">
+                    <label for="scannerPartialCrate" style="color: white; margin: 0;">Partial crate</label>
+                    <input type="number" id="scannerManualPunnets" min="1" max="50" placeholder="Punnets" style="display: none; width: 100px;">
+                </div>
+                <button class="capture-button" id="captureButton" onclick="captureCode()" disabled style="background: white; border: 5px solid rgba(255,255,255,0.3); width: 80px; height: 80px; border-radius: 50%; font-size: 32px; cursor: pointer; margin: 10px auto; display: block;">📷</button>
+                <div class="scanner-actions" style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                    <button class="btn btn-primary" onclick="moreCrates()">➕ More Crates</button>
+                    <button class="btn btn-success" onclick="completeBatch()">✅ Complete Batch</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1058,6 +1067,9 @@
         </div>
     </div>
     
+    <!-- Load ZXing library -->
+    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
+    
     <!-- ============= JAVASCRIPT ============= -->
     <script>
         // ============= GLOBAL VARIABLES =============
@@ -1068,6 +1080,9 @@
         let clockPhotoStream = null;
         let clockPhotoData = null;
         let pickerTallies = {}; // Track crates per picker
+        let codeReader = null;
+        let scanPaused = false;
+        let detectedCode = null;
         
         // ============= STORAGE FUNCTIONS =============
         function saveToStorage(key, value) {
@@ -1631,93 +1646,170 @@
                 return;
             }
             
-            const overlay = document.getElementById('scannerOverlay');
-            overlay.classList.add('active');
+            // Update batch label
+            const batchId = getFromStorage('currentBatchId', 1);
+            document.getElementById('scannerBatchLabel').textContent = `Batch #${batchId}`;
             
-            const constraints = {
-                video: {
-                    facingMode: 'environment',
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 }
+            // Open scanner overlay
+            document.getElementById('scannerOverlay').classList.add('active');
+            
+            // Initialize scanner
+            initializeScanner();
+        }
+        
+        async function initializeScanner() {
+            const statusElement = document.getElementById('scannerStatus');
+            const captureButton = document.getElementById('captureButton');
+            
+            try {
+                statusElement.textContent = 'Requesting camera permission...';
+                
+                // Create code reader
+                codeReader = new ZXing.BrowserMultiFormatReader();
+                
+                // Get video devices
+                const devices = await codeReader.listVideoInputDevices();
+                
+                if (devices.length === 0) {
+                    throw new Error('No camera devices found');
                 }
-            };
-            
-            navigator.mediaDevices.getUserMedia(constraints)
-                .then(stream => {
-                    currentStream = stream;
-                    const video = document.getElementById('videoPreview');
-                    video.srcObject = stream;
-                })
-                .catch(err => {
-                    showToast('Could not access camera');
-                    closeScanner();
+                
+                // Prefer back camera
+                let selectedDevice = devices[0].deviceId;
+                for (const device of devices) {
+                    if (device.label.toLowerCase().includes('back') || 
+                        device.label.toLowerCase().includes('environment') ||
+                        device.label.toLowerCase().includes('rear')) {
+                        selectedDevice = device.deviceId;
+                        break;
+                    }
+                }
+                
+                statusElement.textContent = 'Starting camera...';
+                
+                // Start scanning
+                scanPaused = false;
+                await codeReader.decodeFromVideoDevice(selectedDevice, 'preview', (result, err) => {
+                    if (result && !scanPaused) {
+                        handleDetection(result.text);
+                    }
                 });
-        }
-        
-        function closeScanner() {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-                currentStream = null;
-            }
-            document.getElementById('scannerOverlay').classList.remove('active');
-        }
-        
-        function captureImage() {
-            const video = document.getElementById('videoPreview');
-            const canvas = document.getElementById('captureCanvas');
-            const context = canvas.getContext('2d');
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0);
-            
-            // Get image data
-            const imageData = canvas.toDataURL('image/jpeg');
-            
-            // Parse the data from the image
-            // For now, prompt for picker ID since OCR/QR would need external library
-            const scanData = prompt('Enter the text from the label (Picker ID):');
-            
-            if (scanData && scanData.trim()) {
-                processScannedData(scanData.trim());
+                
+                // Get the stream for later cleanup
+                const videoElement = document.getElementById('preview');
+                currentStream = videoElement.srcObject;
+                
+                statusElement.textContent = 'Ready to scan...';
+                
+            } catch (error) {
+                console.error('Scanner initialization error:', error);
+                statusElement.textContent = 'Camera error: ' + error.message;
+                showToast('Failed to initialize camera');
             }
         }
         
-        function processScannedData(qrData) {
+        function handleDetection(code) {
+            if (scanPaused) return;
+            
+            scanPaused = true;
+            detectedCode = code;
+            
+            const statusElement = document.getElementById('scannerStatus');
+            const captureButton = document.getElementById('captureButton');
+            
+            // Show detected code
+            statusElement.textContent = `Detected: ${code.substring(0, 50)}${code.length > 50 ? '...' : ''} - Tap Capture`;
+            captureButton.disabled = false;
+            
+            // Vibrate if available
+            if (navigator.vibrate) {
+                navigator.vibrate(100);
+            }
+        }
+        
+        function captureCode() {
+            if (!detectedCode) return;
+            
+            const statusElement = document.getElementById('scannerStatus');
+            const captureButton = document.getElementById('captureButton');
+            
+            // Parse QR code
+            const parsed = parseQRCode(detectedCode);
+            
+            // Check for duplicate crate today
+            if (parsed.crate_id && isDuplicateCrateToday(parsed.crate_id)) {
+                if (!confirm(`Crate ${parsed.crate_id} was already scanned today. Add anyway?`)) {
+                    resumeScanning();
+                    return;
+                }
+            }
+            
+            // Create record
+            const record = createHarvestRecord(parsed);
+            
+            // Save record
+            const records = getFromStorage('harvestRecords', []);
+            records.push(record);
+            saveToStorage('harvestRecords', records);
+            
+            // Update picker tally
+            const picker = parsed.picker_id || detectedCode;
+            if (!pickerTallies[picker]) {
+                pickerTallies[picker] = 0;
+            }
+            pickerTallies[picker]++;
+            updatePickerTally();
+            
+            // Update UI
+            currentBatchCrates++;
+            updateBatchPill();
+            
+            statusElement.textContent = `Added: ${record.kg.toFixed(1)}kg - ${currentBatchCrates} crates total`;
+            showToast(`Added: ${record.kg.toFixed(1)}kg`);
+            
+            // Resume scanning after short delay
+            setTimeout(resumeScanning, 1000);
+        }
+        
+        function parseQRCode(code) {
+            // Try to parse as JSON first
+            try {
+                const parsed = JSON.parse(code);
+                return parsed;
+            } catch (e) {
+                // If not JSON, treat as simple text (picker ID or crate ID)
+                // Check if it's an employee name
+                const employees = getFromStorage('employees', []);
+                const employee = employees.find(emp => emp.qrCode === code || emp.name === code);
+                
+                return {
+                    picker_id: employee ? employee.name : code,
+                    crate_id: code
+                };
+            }
+        }
+        
+        function isDuplicateCrateToday(crateId) {
+            const records = getFromStorage('harvestRecords', []);
+            const today = new Date().toDateString();
+            
+            return records.some(record => 
+                record.crate_id === crateId && 
+                new Date(record.timestamp).toDateString() === today
+            );
+        }
+        
+        function createHarvestRecord(parsed) {
             const variety = document.getElementById('variety').value;
             const block = document.getElementById('block').value;
             const size = document.getElementById('size').value;
-            const isPartial = document.getElementById('partialCrate').checked;
-            const manualPunnets = isPartial ? parseInt(document.getElementById('manualPunnetsInput').value) : null;
+            const isPartial = document.getElementById('scannerPartialCrate').checked;
+            const manualPunnets = isPartial ? parseInt(document.getElementById('scannerManualPunnets').value) : null;
             
             const punnetSettings = getFromStorage('punnetSettings', {});
             const sizeSettings = punnetSettings[size];
             
-            if (!sizeSettings) {
-                showToast('Invalid size settings');
-                return;
-            }
-            
-            // Check if scanned data is an employee name
-            const employees = getFromStorage('employees', []);
-            const employee = employees.find(emp => emp.qrCode === qrData || emp.name === qrData);
-            
-            let pickerId = qrData;
-            if (employee) {
-                pickerId = employee.name;
-            }
-            
-            // Update picker tally
-            if (!pickerTallies[pickerId]) {
-                pickerTallies[pickerId] = 0;
-            }
-            pickerTallies[pickerId]++;
-            updatePickerTally();
-            
-            // Calculate punnets and kg
             let punnetsTotal;
-            let crateQty = 1;
-            
             if (isPartial && manualPunnets) {
                 punnetsTotal = manualPunnets;
             } else {
@@ -1725,49 +1817,53 @@
             }
             
             const kg = (punnetsTotal * sizeSettings.punnetWeightG) / 1000;
-            
-            // Save record
             const batchId = getFromStorage('currentBatchId', 1);
-            const records = getFromStorage('harvestRecords', []);
             
-            records.push({
+            return {
                 timestamp: new Date().toISOString(),
-                picker_id: pickerId,
-                crate_id: qrData,
+                picker_id: parsed.picker_id || detectedCode,
+                crate_id: parsed.crate_id || detectedCode,
                 variety: variety,
                 block: block,
                 size: size,
                 punnets_per_crate: sizeSettings.punnetsPerCrate,
-                crate_qty: crateQty,
+                crate_qty: 1,
                 is_partial: isPartial,
                 manual_punnets: manualPunnets,
                 punnets_total: punnetsTotal,
                 punnet_weight_g: sizeSettings.punnetWeightG,
                 kg: kg,
                 batch_id: batchId,
-                scan_raw: qrData
-            });
-            
-            saveToStorage('harvestRecords', records);
-            
-            currentBatchCrates++;
-            updateBatchPill();
-            
-            document.getElementById('scanStatus').textContent = `Scanned: ${pickerId} - ${punnetsTotal} punnets (${kg.toFixed(1)}kg)`;
-            showToast(`Recorded: ${pickerId} - ${kg.toFixed(1)}kg`);
+                scan_raw: detectedCode
+            };
         }
         
-        function finishBatch() {
+        function resumeScanning() {
+            scanPaused = false;
+            detectedCode = null;
+            document.getElementById('captureButton').disabled = true;
+            document.getElementById('scannerStatus').textContent = 'Ready to scan...';
+        }
+        
+        function moreCrates() {
+            // Just resume scanning for more crates
+            resumeScanning();
+            showToast('Scan more crates...');
+        }
+        
+        function completeBatch() {
             if (currentBatchCrates === 0) {
                 showToast('No crates in current batch');
                 return;
             }
             
-            // Increment batch ID
             const currentBatchId = getFromStorage('currentBatchId', 1);
             saveToStorage('currentBatchId', currentBatchId + 1);
             
             showToast(`Batch #${currentBatchId} completed with ${currentBatchCrates} crates`);
+            
+            // Close scanner and reset
+            closeScanner();
             
             // Reset for new batch
             currentBatchCrates = 0;
@@ -1779,6 +1875,32 @@
             document.getElementById('partialCrate').checked = false;
             document.getElementById('manualPunnets').style.display = 'none';
             document.getElementById('manualPunnetsInput').value = '';
+        }
+        
+        function closeScanner() {
+            // Stop code reader
+            if (codeReader) {
+                codeReader.reset();
+                codeReader = null;
+            }
+            
+            // Stop video stream
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+            
+            // Reset scanner state
+            scanPaused = false;
+            detectedCode = null;
+            
+            // Hide overlay
+            document.getElementById('scannerOverlay').classList.remove('active');
+        }
+        
+        function finishBatch() {
+            // This is now just a wrapper for completeBatch when not in scanner
+            completeBatch();
         }
         
         // ============= RECORDS SCREEN =============
@@ -2377,6 +2499,17 @@
                 manualInput.style.display = 'none';
                 document.getElementById('manualPunnetsInput').required = false;
                 document.getElementById('manualPunnetsInput').value = '';
+            }
+        });
+        
+        // Scanner partial crate checkbox handler
+        document.getElementById('scannerPartialCrate').addEventListener('change', function(e) {
+            const manualInput = document.getElementById('scannerManualPunnets');
+            if (e.target.checked) {
+                manualInput.style.display = 'block';
+            } else {
+                manualInput.style.display = 'none';
+                manualInput.value = '';
             }
         });
         
