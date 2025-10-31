@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Market Garden Management System</title>
+    <title>Connings MGM System</title>
     
-    <!-- ============= STYLES ============= -->
     <style>
         * {
             margin: 0;
@@ -16,49 +15,63 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-            font-size: 16px;
+            font-size: 18px;
             background: #f5f5f5;
             min-height: 100vh;
             overflow-x: hidden;
         }
         
-        /* Header */
+        /* Header with Home Button */
         .header {
             background: linear-gradient(135deg, #6b8e23 0%, #8fbc8f 100%);
             color: white;
-            padding: 20px;
-            text-align: center;
-            font-size: 20px;
-            font-weight: 600;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            position: relative;
         }
         
         .home-btn {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
             background: rgba(255,255,255,0.2);
             border: 2px solid white;
             color: white;
-            width: 40px;
-            height: 40px;
+            width: 45px;
+            height: 45px;
             border-radius: 8px;
             font-size: 24px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s;
+            flex-shrink: 0;
         }
         
-        .home-btn:hover {
-            background: rgba(255,255,255,0.3);
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 8px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
         }
         
-        .home-btn:active {
-            transform: translateY(-50%) scale(0.95);
+        .header-title {
+            flex: 1;
+            text-align: center;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .header-spacer {
+            width: 45px;
+            flex-shrink: 0;
         }
         
         /* Screens */
@@ -127,12 +140,13 @@
             margin-bottom: 8px;
             font-weight: 500;
             color: #333;
+            font-size: 18px;
         }
         
         select, input, textarea {
             width: 100%;
             padding: 15px;
-            font-size: 16px;
+            font-size: 20px;
             border: 2px solid #ddd;
             border-radius: 8px;
             background: white;
@@ -250,14 +264,10 @@
             overflow: hidden;
         }
         
-        #videoPreview {
+        #preview {
             width: 100%;
             height: 100%;
             object-fit: cover;
-        }
-        
-        #captureCanvas {
-            display: none;
         }
         
         .scanner-controls {
@@ -268,122 +278,225 @@
             background: rgba(0,0,0,0.8);
             padding: 20px;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1002;
+            flex-direction: column;
+            gap: 15px;
         }
         
-        #captureBtn {
+        .scanner-status {
+            color: white;
+            text-align: center;
+            font-size: 16px;
+            padding: 10px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 8px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .partial-crate-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .partial-crate-container input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .partial-crate-container input[type="number"] {
+            width: 80px;
+            padding: 8px;
+        }
+        
+        .capture-button {
             width: 80px;
             height: 80px;
             border-radius: 50%;
             background: white;
-            border: 5px solid rgba(255,255,255,0.3);
+            border: 4px solid #4a90e2;
+            margin: 0 auto;
             cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            transition: all 0.3s;
         }
         
-        #captureBtn:active {
+        .capture-button:active {
             transform: scale(0.9);
+            background: #e6f3ff;
         }
         
-        /* Picker Tally Box */
-        .picker-tally-container {
+        .capture-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .scanner-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .scanner-actions .btn {
+            flex: 1;
+            min-height: 50px;
+        }
+        
+        /* Employee Grid */
+        .employee-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .employee-card {
             background: white;
             border: 2px solid #4a90e2;
             border-radius: 10px;
             padding: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .picker-tally-container h3 {
-            margin-bottom: 15px;
-            color: #333;
-            font-size: 18px;
-        }
-        
-        .picker-tally-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 8px;
-        }
-        
-        .picker-tally-name {
-            font-weight: 500;
-            color: #333;
-        }
-        
-        .picker-tally-count {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .picker-tally-count input {
-            width: 70px;
-            padding: 5px 10px;
             text-align: center;
-            font-size: 16px;
-            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
         }
         
-        /* Stats cards */
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
+        .employee-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .employee-photo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #e6f3ff;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            overflow: hidden;
+        }
+        
+        .employee-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .employee-name {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            font-size: 24px;
+            font-weight: 600;
             margin-bottom: 20px;
+            text-align: center;
         }
         
-        .stat-card {
+        /* QR Code Display */
+        .qr-display {
             background: white;
             padding: 20px;
             border-radius: 10px;
             text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 20px 0;
         }
         
-        .stat-value {
-            font-size: 32px;
-            font-weight: bold;
-            color: #4a90e2;
-            margin-bottom: 5px;
+        .qr-code-container {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 10px;
         }
         
-        .stat-label {
-            font-size: 14px;
-            color: #666;
+        /* Sticker Preview */
+        .sticker-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .sticker {
+            background: white;
+            border: 2px dashed #333;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .sticker-qr {
+            margin: 10px auto;
+        }
+        
+        .sticker-name {
+            font-weight: 600;
+            margin-top: 10px;
         }
         
         /* Tables */
         .table-container {
             overflow-x: auto;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            margin: 20px 0;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         th, td {
             padding: 12px;
             text-align: left;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #ddd;
         }
         
         th {
             background: #f8f9fa;
             font-weight: 600;
-            color: #333;
             position: sticky;
             top: 0;
         }
@@ -392,54 +505,64 @@
             background: #f8f9fa;
         }
         
-        .editable-cell {
-            cursor: pointer;
-            position: relative;
+        /* KPI Cards */
+        .kpi-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
         }
         
-        .editable-cell:hover {
-            background: #e3f2fd;
+        .kpi-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
-        .edit-input {
-            width: 100%;
-            padding: 5px;
-            border: 2px solid #4a90e2;
-            border-radius: 4px;
+        .kpi-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4a90e2;
         }
         
-        .action-btn {
-            padding: 5px 10px;
+        .kpi-label {
             font-size: 14px;
-            min-height: auto;
-            margin: 2px;
+            color: #666;
+            margin-top: 5px;
         }
         
-        /* Toast notifications */
+        /* Toast */
         .toast {
             position: fixed;
-            bottom: 20px;
+            bottom: 80px;
             left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: #333;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
             color: white;
             padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border-radius: 25px;
             z-index: 2000;
-            opacity: 0;
-            transition: all 0.3s;
+            display: none;
+            animation: slideUp 0.3s;
         }
         
-        .toast.show {
-            transform: translateX(-50%) translateY(0);
-            opacity: 1;
+        @keyframes slideUp {
+            from { 
+                transform: translateX(-50%) translateY(100px);
+                opacity: 0;
+            }
+            to { 
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
         }
         
         /* Filters */
-        .filters-container {
+        .filters {
             background: white;
-            padding: 20px;
+            padding: 15px;
             border-radius: 10px;
             margin-bottom: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -466,112 +589,15 @@
             color: #333;
         }
         
-        /* Employee tiles */
-        .employee-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-        
-        .employee-tile {
-            background: white;
-            border: 2px solid #4a90e2;
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .employee-tile:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        .employee-photo {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: #f0f0f0;
-            margin: 0 auto 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            overflow: hidden;
-        }
-        
-        .employee-photo img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .employee-name {
-            font-weight: 500;
-            color: #333;
-        }
-        
-        /* Camera preview for clock in/out */
-        .camera-preview {
-            position: relative;
-            width: 100%;
-            max-width: 400px;
-            margin: 20px auto;
-        }
-        
-        .camera-preview video {
-            width: 100%;
-            border-radius: 10px;
-        }
-        
-        .camera-preview img {
-            width: 100%;
-            border-radius: 10px;
-        }
-        
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 1500;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .modal.active {
-            display: flex;
-        }
-        
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            max-width: 500px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        
-        .modal-header {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: #333;
-        }
-        
-        /* Responsive adjustments */
         @media (max-width: 375px) {
-            .header {
-                font-size: 18px;
-                padding: 15px;
+            .header-title {
+                font-size: 16px;
+            }
+            
+            .home-btn, .back-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
             }
             
             .tile {
@@ -588,21 +614,24 @@
     </style>
 </head>
 <body>
-    <!-- ============= HTML MARKUP ============= -->
+    <!-- Header -->
     <div class="header">
-        <button class="home-btn" onclick="goHome()" style="display: none;">🏠</button>
-        <span id="headerTitle">Market Garden Management System</span>
+        <button class="home-btn" onclick="goHome()">🏠</button>
+        <button class="back-btn" onclick="goBack()" style="display: none;" id="backBtn">←</button>
+        <div class="header-title">Connings MGM System</div>
+        <div class="header-spacer"></div>
     </div>
-    
-    <!-- Toast notification -->
-    <div class="toast" id="toast"></div>
     
     <!-- Home Screen -->
     <div class="screen active" id="homeScreen">
         <div class="tiles-container">
-            <div class="tile" onclick="navigateToScreen('strawberryScreen')">
+            <div class="tile" onclick="navigateToScreen('strawberryScanScreen')">
                 <div class="emoji">🍓</div>
-                <div>Strawberry</div>
+                <div>Strawberry Scan</div>
+            </div>
+            <div class="tile" onclick="navigateToScreen('manualEntryScreen')">
+                <div class="emoji">✍️</div>
+                <div>Strawberry Manual Entry</div>
             </div>
             <div class="tile" onclick="navigateToScreen('employeeMenuScreen')">
                 <div class="emoji">👥</div>
@@ -615,6 +644,108 @@
             <div class="tile" onclick="navigateToScreen('settingsMenuScreen')">
                 <div class="emoji">⚙️</div>
                 <div>Settings</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Strawberry Scan Screen -->
+    <div class="screen" id="strawberryScanScreen">
+        <div class="batch-pill" id="batchPill">Batch #1 - 0 crates</div>
+        
+        <div class="form-group">
+            <label for="variety">Variety</label>
+            <select id="variety"></select>
+        </div>
+        
+        <div class="form-group">
+            <label for="block">Block</label>
+            <select id="block"></select>
+        </div>
+        
+        <div class="form-group">
+            <label for="size">Size</label>
+            <select id="size">
+                <option value="">Select Size</option>
+                <option value="Small">Small</option>
+                <option value="Medium">Medium</option>
+                <option value="Large">Large</option>
+            </select>
+        </div>
+        
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="openScanner()">📷 Scan Crates</button>
+        </div>
+    </div>
+    
+    <!-- Manual Entry Screen -->
+    <div class="screen" id="manualEntryScreen">
+        <h2 style="margin-bottom: 20px;">Manual Entry</h2>
+        
+        <div class="form-group">
+            <label for="manualDate">Date *</label>
+            <input type="date" id="manualDate" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="manualPicker">Picker *</label>
+            <input type="text" id="manualPicker" placeholder="Enter picker ID" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="manualVariety">Variety *</label>
+            <select id="manualVariety" required></select>
+        </div>
+        
+        <div class="form-group">
+            <label for="manualBlock">Block *</label>
+            <select id="manualBlock" required></select>
+        </div>
+        
+        <div class="form-group">
+            <label for="manualSize">Size *</label>
+            <select id="manualSize" required>
+                <option value="">Select Size</option>
+                <option value="Small">Small</option>
+                <option value="Medium">Medium</option>
+                <option value="Large">Large</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="manualCrates">Number of Crates *</label>
+            <input type="number" id="manualCrates" min="0" value="0" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="manualPartialPunnets">Punnets in Partial Crate</label>
+            <input type="number" id="manualPartialPunnets" min="0" placeholder="Leave blank if none">
+        </div>
+        
+        <div class="btn-group">
+            <button class="btn btn-success" onclick="saveManualEntry()">💾 Save Entry</button>
+        </div>
+    </div>
+    
+    <!-- Scanner Overlay -->
+    <div class="scanner-overlay" id="scannerOverlay">
+        <div class="scanner-header">
+            <span id="scannerBatchLabel">Batch #1</span>
+            <button class="scanner-close" onclick="closeScanner()">✕</button>
+        </div>
+        <div class="scanner-content">
+            <video id="preview"></video>
+            <div class="scanner-controls">
+                <div class="scanner-status" id="scannerStatus">Initializing camera...</div>
+                <div class="partial-crate-container">
+                    <input type="checkbox" id="partialCrate">
+                    <label for="partialCrate" style="color: white; margin: 0;">Partial crate</label>
+                    <input type="number" id="manualPunnets" min="1" max="50" placeholder="Punnets" style="display: none;">
+                </div>
+                <button class="capture-button" id="captureButton" onclick="captureCode()" disabled>📷</button>
+                <div class="scanner-actions">
+                    <button class="btn btn-primary" onclick="moreCrates()">➕ More Crates</button>
+                    <button class="btn btn-success" onclick="completeBatch()">✅ Complete Batch</button>
+                </div>
             </div>
         </div>
     </div>
@@ -643,21 +774,34 @@
     
     <!-- Enrol Employee Screen -->
     <div class="screen" id="enrollEmployeeScreen">
-        <h2>Enrol New Employee</h2>
+        <h2 style="margin-bottom: 20px;">Enrol New Employee</h2>
+        
         <div class="form-group">
             <label for="employeeName">Employee Name *</label>
             <input type="text" id="employeeName" required placeholder="Enter full name">
         </div>
+        
         <div class="form-group">
             <label for="employeePhone">Phone Number</label>
             <input type="tel" id="employeePhone" placeholder="Enter phone number">
         </div>
+        
         <div class="form-group">
             <label for="employeeEmail">Email Address</label>
             <input type="email" id="employeeEmail" placeholder="Enter email address">
         </div>
+        
+        <div id="qrCodePreview" class="qr-display" style="display: none;">
+            <h3>Assigned QR Code:</h3>
+            <div class="qr-code-container">
+                <div id="qrCanvas"></div>
+                <p id="qrCodeText" style="margin-top: 10px; font-weight: bold;"></p>
+            </div>
+        </div>
+        
         <div class="btn-group">
-            <button class="btn btn-primary" onclick="enrollEmployee()">Enrol Employee</button>
+            <button class="btn btn-primary" onclick="generateEmployeeQR()">Generate QR Code</button>
+            <button class="btn btn-success" id="enrollBtn" onclick="enrollEmployee()" style="display: none;">Enrol Employee</button>
         </div>
     </div>
     
@@ -693,61 +837,110 @@
     <div class="modal" id="clockCameraModal">
         <div class="modal-content">
             <div class="modal-header" id="clockModalHeader">Take Photo</div>
-            <div class="camera-preview">
-                <video id="clockVideo" autoplay playsinline></video>
-                <img id="clockPhotoPreview" style="display: none;">
+            <div style="position: relative; width: 100%; max-width: 400px; margin: 20px auto;">
+                <video id="clockVideo" autoplay playsinline style="width: 100%; border-radius: 10px; display: none;"></video>
+                <canvas id="clockCanvas" style="width: 100%; border-radius: 10px; display: none;"></canvas>
+                <img id="clockPhotoPreview" style="display: none; width: 100%; border-radius: 10px;">
             </div>
             <div class="btn-group">
-                <button class="btn btn-primary" id="clockCaptureBtn" onclick="captureClockPhoto()">Take Photo</button>
-                <button class="btn btn-success" id="clockConfirmBtn" style="display: none;" onclick="confirmClockPhoto()">Confirm</button>
-                <button class="btn" id="clockRetakeBtn" style="display: none;" onclick="retakeClockPhoto()">Retake</button>
-                <button class="btn" onclick="closeClockCamera()">Cancel</button>
+                <button class="btn btn-primary" id="clockCaptureBtn" onclick="captureClockPhoto()">📷 Take Photo</button>
+                <button class="btn btn-success" id="clockConfirmBtn" style="display: none;" onclick="confirmClockPhoto()">✓ Confirm</button>
+                <button class="btn" id="clockRetakeBtn" style="display: none;" onclick="retakeClockPhoto()">↺ Retake</button>
+                <button class="btn" onclick="closeClockCamera()">✕ Cancel</button>
             </div>
         </div>
     </div>
     
     <!-- Print Stickers Screen -->
     <div class="screen" id="printStickersScreen">
-        <h2>Print Employee Stickers</h2>
+        <h2 style="margin-bottom: 20px;">Print Employee Stickers</h2>
+        
         <div class="form-group">
             <label for="stickerEmployee">Select Employee *</label>
             <select id="stickerEmployee" required></select>
         </div>
+        
         <div class="form-group">
             <label for="stickerQuantity">Number of Stickers *</label>
             <input type="number" id="stickerQuantity" min="1" value="10" required>
         </div>
+        
         <div class="btn-group">
-            <button class="btn btn-primary" onclick="printStickers()">Generate Stickers</button>
+            <button class="btn btn-primary" onclick="generateStickers()">Generate Stickers</button>
+            <button class="btn btn-success" onclick="window.print()" style="display: none;" id="printBtn">🖨️ Print</button>
         </div>
+        
         <div id="stickerPreview"></div>
     </div>
     
     <!-- Time Records Screen -->
     <div class="screen" id="timeRecordsScreen">
-        <h2>Time Records</h2>
-        <div class="filters-container">
+        <h2 style="margin-bottom: 20px;">Time Records</h2>
+        
+        <div class="filters">
             <div class="filter-row">
-                <div class="form-group">
-                    <label for="timeRecordsFilter">Filter</label>
-                    <select id="timeRecordsFilter" onchange="loadTimeRecords()">
-                        <option value="today">Today</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                        <option value="all">All Time</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="timeRecordsEmployee">Employee</label>
-                    <select id="timeRecordsEmployee" onchange="loadTimeRecords()">
-                        <option value="all">All Employees</option>
-                    </select>
-                </div>
+                <select id="timeRecordsFilter" onchange="loadTimeRecords()">
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="all">All Time</option>
+                </select>
             </div>
         </div>
+        
         <div id="timeRecordsContainer"></div>
+    </div>
+    
+    <!-- Records Screen -->
+    <div class="screen" id="recordsScreen">
+        <div class="filters">
+            <div class="filter-row">
+                <select id="filterTime">
+                    <option value="today">Today</option>
+                    <option value="week">Last 7 days</option>
+                    <option value="month">This month</option>
+                    <option value="all">All</option>
+                </select>
+                <select id="filterVariety">
+                    <option value="all">All Varieties</option>
+                </select>
+                <select id="filterBlock">
+                    <option value="all">All Blocks</option>
+                </select>
+                <select id="filterGroupBy">
+                    <option value="none">No Grouping</option>
+                    <option value="variety">Group by Variety</option>
+                    <option value="block">Group by Block</option>
+                    <option value="picker">Group by Picker</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="kpi-container" id="kpiContainer">
+            <div class="kpi-card">
+                <div class="kpi-value" id="kpiCrates">0</div>
+                <div class="kpi-label">Crates</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="kpiPunnets">0</div>
+                <div class="kpi-label">Punnets</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="kpiKg">0</div>
+                <div class="kpi-label">Kg</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="kpiKgPerPlant">0</div>
+                <div class="kpi-label">Kg/Plant</div>
+            </div>
+        </div>
+        
+        <div id="summaryTableContainer"></div>
+        <div id="recordsTableContainer"></div>
+        
         <div class="btn-group">
-            <button class="btn" onclick="exportTimeRecords()">📥 Export CSV</button>
+            <button class="btn btn-primary" onclick="exportCSV()">📁 Export CSV</button>
+            <button class="btn btn-danger" onclick="clearAllRecords()">🗑️ Clear All</button>
         </div>
     </div>
     
@@ -771,890 +964,424 @@
     
     <!-- Picking Settings Screen -->
     <div class="screen" id="pickingSettingsScreen">
-        <h2>Picking Settings</h2>
-        
         <div class="settings-section">
             <h3>Punnet Settings</h3>
-            
-            <h4 style="margin-top: 20px; color: #666;">Small Punnets</h4>
-            <div class="form-group">
-                <label for="smallPunnets">Punnets per Crate</label>
-                <input type="number" id="smallPunnets" value="32">
-            </div>
-            <div class="form-group">
-                <label for="smallWeight">Weight per Punnet (grams)</label>
-                <input type="number" id="smallWeight" value="250">
-            </div>
-            
-            <h4 style="margin-top: 20px; color: #666;">Medium Punnets</h4>
-            <div class="form-group">
-                <label for="mediumPunnets">Punnets per Crate</label>
-                <input type="number" id="mediumPunnets" value="20">
-            </div>
-            <div class="form-group">
-                <label for="mediumWeight">Weight per Punnet (grams)</label>
-                <input type="number" id="mediumWeight" value="400">
-            </div>
-            
-            <h4 style="margin-top: 20px; color: #666;">Large Punnets</h4>
-            <div class="form-group">
-                <label for="largePunnets">Punnets per Crate</label>
-                <input type="number" id="largePunnets" value="8">
-            </div>
-            <div class="form-group">
-                <label for="largeWeight">Weight per Punnet (grams)</label>
-                <input type="number" id="largeWeight" value="800">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Size</th>
+                            <th>Punnets/Crate</th>
+                            <th>Weight (g)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Small</td>
+                            <td><input type="number" id="smallPunnets" value="32" min="1"></td>
+                            <td><input type="number" id="smallWeight" value="250" min="1"></td>
+                        </tr>
+                        <tr>
+                            <td>Medium</td>
+                            <td><input type="number" id="mediumPunnets" value="20" min="1"></td>
+                            <td><input type="number" id="mediumWeight" value="400" min="1"></td>
+                        </tr>
+                        <tr>
+                            <td>Large</td>
+                            <td><input type="number" id="largePunnets" value="8" min="1"></td>
+                            <td><input type="number" id="largeWeight" value="800" min="1"></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
         
         <div class="settings-section">
             <h3>Master Lists</h3>
             <div class="form-group">
-                <label for="varietiesList">Varieties (one per line)</label>
-                <textarea id="varietiesList" rows="6" placeholder="e.g.&#10;Albion&#10;San Andreas&#10;Monterey"></textarea>
+                <label for="varietiesList">Varieties (one per line or comma-separated)</label>
+                <textarea id="varietiesList" rows="4">Albion
+Camarosa
+Ventana</textarea>
             </div>
             <div class="form-group">
-                <label for="blocksList">Blocks (one per line)</label>
-                <textarea id="blocksList" rows="6" placeholder="e.g.&#10;Block A&#10;Block B&#10;Block C"></textarea>
+                <label for="blocksList">Blocks (one per line or comma-separated)</label>
+                <textarea id="blocksList" rows="4">Block A
+Block B
+Block C</textarea>
             </div>
         </div>
         
         <div class="btn-group">
-            <button class="btn btn-success" onclick="savePickingSettings()">Save Settings</button>
+            <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
         </div>
     </div>
     
     <!-- Employee Settings Screen -->
     <div class="screen" id="employeeSettingsScreen">
-        <h2>Employee Settings</h2>
         <div class="settings-section">
-            <p style="color: #666; font-style: italic;">Employee settings to be configured (TBC)</p>
+            <h3>Employee Settings</h3>
+            <p style="color: #666;">Employee configuration options coming soon...</p>
         </div>
     </div>
     
     <!-- Data Settings Screen -->
     <div class="screen" id="dataSettingsScreen">
-        <h2>Data Settings</h2>
         <div class="settings-section">
-            <h3>Plants per Block</h3>
-            <div id="plantsPerBlockContainer"></div>
-            <div class="btn-group">
-                <button class="btn btn-success" onclick="savePlantsPerBlock()">Save Settings</button>
+            <h3>Data Settings</h3>
+            <div class="form-group">
+                <label for="plantsPerBlock">Plants per Block</label>
+                <input type="number" id="plantsPerBlock" min="1" value="1000" placeholder="Enter number of plants">
             </div>
-        </div>
-    </div>
-    
-    <!-- Strawberry Screen -->
-    <div class="screen" id="strawberryScreen">
-        <div class="batch-pill" id="batchPill">Batch #1 - 0 crates</div>
-        
-        <div class="form-group">
-            <label for="variety">Variety</label>
-            <select id="variety"></select>
-        </div>
-        
-        <div class="form-group">
-            <label for="block">Block</label>
-            <select id="block"></select>
-        </div>
-        
-        <div class="form-group">
-            <label for="size">Size</label>
-            <select id="size">
-                <option value="">Select Size</option>
-                <option value="Small">Small</option>
-                <option value="Medium">Medium</option>
-                <option value="Large">Large</option>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label>
-                <input type="checkbox" id="partialCrate"> Partial Crate
-            </label>
-        </div>
-        
-        <div class="form-group" id="manualPunnets" style="display: none;">
-            <label for="manualPunnetsInput">Number of Punnets in Partial Crate</label>
-            <input type="number" id="manualPunnetsInput" min="1" placeholder="e.g. 5">
         </div>
         
         <div class="btn-group">
-            <button class="btn btn-primary" onclick="openScanner()">📷 Photo Scan</button>
-            <button class="btn" onclick="finishBatch()">✅ Finish Batch</button>
-        </div>
-        
-        <!-- Picker Tally -->
-        <div class="picker-tally-container" id="pickerTallyContainer" style="display: none;">
-            <h3>Picker Tally</h3>
-            <div id="pickerTallyList"></div>
+            <button class="btn btn-primary" onclick="saveDataSettings()">💾 Save Settings</button>
         </div>
     </div>
     
-    <!-- Scanner Overlay -->
-    <div class="scanner-overlay" id="scannerOverlay">
-        <div class="scanner-header">
-            <span id="scannerBatchLabel">Batch #1</span>
-            <button class="scanner-close" onclick="closeScanner()">✕</button>
-        </div>
-        <div class="scanner-content">
-            <video id="preview"></video>
-            <div class="scanner-controls">
-                <div class="scanner-status" id="scannerStatus">Initializing camera...</div>
-                <div class="partial-crate-container" style="display: flex; align-items: center; gap: 10px; margin: 10px 0;">
-                    <input type="checkbox" id="scannerPartialCrate">
-                    <label for="scannerPartialCrate" style="color: white; margin: 0;">Partial crate</label>
-                    <input type="number" id="scannerManualPunnets" min="1" max="50" placeholder="Punnets" style="display: none; width: 100px;">
-                </div>
-                <button class="capture-button" id="captureButton" onclick="captureCode()" disabled style="background: white; border: 5px solid rgba(255,255,255,0.3); width: 80px; height: 80px; border-radius: 50%; font-size: 32px; cursor: pointer; margin: 10px auto; display: block;">📷</button>
-                <div class="scanner-actions" style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
-                    <button class="btn btn-primary" onclick="moreCrates()">➕ More Crates</button>
-                    <button class="btn btn-success" onclick="completeBatch()">✅ Complete Batch</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Records Screen -->
-    <div class="screen" id="recordsScreen">
-        <div class="filters-container">
-            <div class="filter-row">
-                <div class="form-group">
-                    <label for="filterTime">Time Period</label>
-                    <select id="filterTime">
-                        <option value="today">Today</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                        <option value="all">All Time</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="filterVariety">Variety</label>
-                    <select id="filterVariety">
-                        <option value="all">All Varieties</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="filterBlock">Block</label>
-                    <select id="filterBlock">
-                        <option value="all">All Blocks</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="filterGroupBy">Group By</label>
-                    <select id="filterGroupBy">
-                        <option value="none">No Grouping</option>
-                        <option value="variety">Variety</option>
-                        <option value="block">Block</option>
-                        <option value="size">Size</option>
-                        <option value="picker">Picker</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-        
-        <div class="stats-container">
-            <div class="stat-card">
-                <div class="stat-value" id="statCrates">0</div>
-                <div class="stat-label">Crates</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="statPunnets">0</div>
-                <div class="stat-label">Punnets</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="statKg">0.0</div>
-                <div class="stat-label">Kg</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="statKgPerPlant">0.0</div>
-                <div class="stat-label">Kg/Plant</div>
-            </div>
-        </div>
-        
-        <div id="groupedContainer"></div>
-        <div id="recordsTableContainer"></div>
-        
-        <div class="btn-group">
-            <button class="btn" onclick="exportCSV()">📥 Export CSV</button>
-            <button class="btn" onclick="addManualRecord()">➕ Add Record</button>
-            <button class="btn btn-danger" onclick="clearAllRecords()">🗑️ Clear All</button>
-        </div>
-    </div>
-    
-    <!-- Manual Record Modal -->
-    <div class="modal" id="manualRecordModal">
-        <div class="modal-content">
-            <div class="modal-header">Add Manual Record</div>
-            <div class="form-group">
-                <label for="manualDate">Date *</label>
-                <input type="date" id="manualDate" required>
-            </div>
-            <div class="form-group">
-                <label for="manualPicker">Picker *</label>
-                <select id="manualPicker" required></select>
-            </div>
-            <div class="form-group">
-                <label for="manualVariety">Variety *</label>
-                <select id="manualVariety" required></select>
-            </div>
-            <div class="form-group">
-                <label for="manualBlock">Block *</label>
-                <select id="manualBlock" required></select>
-            </div>
-            <div class="form-group">
-                <label for="manualSize">Size *</label>
-                <select id="manualSize" required>
-                    <option value="">Select Size</option>
-                    <option value="Small">Small</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Large">Large</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="manualCrates">Number of Crates *</label>
-                <input type="number" id="manualCrates" min="0" required>
-            </div>
-            <div class="form-group">
-                <label for="manualPartialPunnets">Punnets in Partial Crate (optional)</label>
-                <input type="number" id="manualPartialPunnets" min="0" placeholder="Leave blank if none">
-            </div>
-            <div class="btn-group">
-                <button class="btn btn-success" onclick="saveManualRecord()">Save</button>
-                <button class="btn" onclick="closeManualRecordModal()">Cancel</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Edit Record Modal -->
-    <div class="modal" id="editRecordModal">
-        <div class="modal-content">
-            <div class="modal-header">Edit Record</div>
-            <input type="hidden" id="editRecordIndex">
-            <div class="form-group">
-                <label for="editPicker">Picker</label>
-                <select id="editPicker"></select>
-            </div>
-            <div class="form-group">
-                <label for="editVariety">Variety</label>
-                <select id="editVariety"></select>
-            </div>
-            <div class="form-group">
-                <label for="editBlock">Block</label>
-                <select id="editBlock"></select>
-            </div>
-            <div class="form-group">
-                <label for="editSize">Size</label>
-                <select id="editSize">
-                    <option value="Small">Small</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Large">Large</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="editCrates">Crates</label>
-                <input type="number" id="editCrates" min="0">
-            </div>
-            <div class="form-group">
-                <label for="editPartialPunnets">Punnets in Partial Crate</label>
-                <input type="number" id="editPartialPunnets" min="0" placeholder="0">
-            </div>
-            <div class="btn-group">
-                <button class="btn btn-success" onclick="saveEditedRecord()">Save Changes</button>
-                <button class="btn btn-danger" onclick="deleteEditedRecord()">Delete</button>
-                <button class="btn" onclick="closeEditRecordModal()">Cancel</button>
-            </div>
-        </div>
-    </div>
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
     
     <!-- Load ZXing library -->
     <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
+    <!-- Load QRCode.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
-    <!-- ============= JAVASCRIPT ============= -->
     <script>
-        // ============= GLOBAL VARIABLES =============
-        let currentStream = null;
-        let currentBatchCrates = 0;
-        let currentClockEmployee = null;
-        let currentClockAction = null;
-        let clockPhotoStream = null;
-        let clockPhotoData = null;
-        let pickerTallies = {}; // Track crates per picker
-        let codeReader = null;
-        let scanPaused = false;
-        let detectedCode = null;
+        // ============= NAVIGATION STACK =============
+        let navigationStack = [];
         
-        // ============= STORAGE FUNCTIONS =============
-        function saveToStorage(key, value) {
-            localStorage.setItem(key, JSON.stringify(value));
+        function navigateToScreen(screenId) {
+            // Save current screen to stack
+            const currentScreen = document.querySelector('.screen.active').id;
+            if (currentScreen !== 'homeScreen') {
+                navigationStack.push(currentScreen);
+            }
+            
+            // Hide all screens
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            // Show selected screen
+            document.getElementById(screenId).classList.add('active');
+            
+            // Show/hide back button
+            const backBtn = document.getElementById('backBtn');
+            if (screenId === 'homeScreen') {
+                backBtn.style.display = 'none';
+                navigationStack = [];
+            } else {
+                backBtn.style.display = 'flex';
+            }
+            
+            // Load screen-specific data
+            loadScreenData(screenId);
         }
         
-        function getFromStorage(key, defaultValue = null) {
-            const stored = localStorage.getItem(key);
-            return stored ? JSON.parse(stored) : defaultValue;
+        function goHome() {
+            navigationStack = [];
+            navigateToScreen('homeScreen');
+        }
+        
+        function goBack() {
+            if (navigationStack.length > 0) {
+                const previousScreen = navigationStack.pop();
+                document.querySelectorAll('.screen').forEach(screen => {
+                    screen.classList.remove('active');
+                });
+                document.getElementById(previousScreen).classList.add('active');
+                loadScreenData(previousScreen);
+                
+                if (previousScreen === 'homeScreen') {
+                    document.getElementById('backBtn').style.display = 'none';
+                }
+            } else {
+                goHome();
+            }
+        }
+        
+        function loadScreenData(screenId) {
+            switch(screenId) {
+                case 'strawberryScanScreen':
+                    loadStrawberryScreen();
+                    break;
+                case 'manualEntryScreen':
+                    loadManualEntryScreen();
+                    break;
+                case 'clockInScreen':
+                    loadClockInScreen();
+                    break;
+                case 'clockOutScreen':
+                    loadClockOutScreen();
+                    break;
+                case 'printStickersScreen':
+                    loadPrintStickersScreen();
+                    break;
+                case 'timeRecordsScreen':
+                    loadTimeRecords();
+                    break;
+                case 'recordsScreen':
+                    loadRecordsScreen();
+                    break;
+                case 'pickingSettingsScreen':
+                    loadPickingSettings();
+                    break;
+                case 'dataSettingsScreen':
+                    loadDataSettings();
+                    break;
+            }
+        }
+        
+        // ============= UTILITY FUNCTIONS =============
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+        
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+        
+        function normalizeList(text) {
+            if (!text) return [];
+            text = text.replace(/\\n/g, '\n');
+            const items = text.split(/[\n,]+/);
+            const normalized = [...new Set(items.map(item => item.trim()).filter(item => item))];
+            return normalized;
+        }
+        
+        // ============= STORAGE HELPERS =============
+        function getFromStorage(key, defaultValue) {
+            try {
+                const value = localStorage.getItem(key);
+                return value ? JSON.parse(value) : defaultValue;
+            } catch (e) {
+                console.error('Storage read error:', e);
+                return defaultValue;
+            }
+        }
+        
+        function saveToStorage(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+                return true;
+            } catch (e) {
+                console.error('Storage write error:', e);
+                showToast('Storage error - data may not persist');
+                return false;
+            }
         }
         
         function initializeStorage() {
-            // Initialize default settings if not present
-            if (!getFromStorage('punnetSettings')) {
+            if (!localStorage.getItem('punnetSettings')) {
                 saveToStorage('punnetSettings', {
                     'Small': { punnetsPerCrate: 32, punnetWeightG: 250 },
                     'Medium': { punnetsPerCrate: 20, punnetWeightG: 400 },
                     'Large': { punnetsPerCrate: 8, punnetWeightG: 800 }
                 });
             }
-            
-            if (!getFromStorage('varieties')) {
-                saveToStorage('varieties', ['Albion', 'San Andreas', 'Monterey']);
+            if (!localStorage.getItem('varieties')) {
+                saveToStorage('varieties', ['Albion', 'Camarosa', 'Ventana']);
             }
-            
-            if (!getFromStorage('blocks')) {
+            if (!localStorage.getItem('blocks')) {
                 saveToStorage('blocks', ['Block A', 'Block B', 'Block C']);
             }
-            
-            if (!getFromStorage('currentBatchId')) {
-                saveToStorage('currentBatchId', 1);
-            }
-            
-            if (!getFromStorage('harvestRecords')) {
+            if (!localStorage.getItem('harvestRecords')) {
                 saveToStorage('harvestRecords', []);
             }
-            
-            if (!getFromStorage('employees')) {
+            if (!localStorage.getItem('currentBatchId')) {
+                saveToStorage('currentBatchId', 1);
+            }
+            if (!localStorage.getItem('employees')) {
                 saveToStorage('employees', []);
             }
-            
-            if (!getFromStorage('timeRecords')) {
+            if (!localStorage.getItem('timeRecords')) {
                 saveToStorage('timeRecords', []);
             }
-            
-            if (!getFromStorage('plantsPerBlock')) {
-                saveToStorage('plantsPerBlock', {});
+            if (!localStorage.getItem('plantsPerBlock')) {
+                saveToStorage('plantsPerBlock', 1000);
             }
         }
         
-        // ============= NAVIGATION =============
-        function navigateToScreen(screenId) {
-            // Hide all screens
-            document.querySelectorAll('.screen').forEach(screen => {
-                screen.classList.remove('active');
-            });
-            
-            // Show target screen
-            document.getElementById(screenId).classList.add('active');
-            
-            // Show/hide home button
-            const homeBtn = document.querySelector('.home-btn');
-            if (screenId === 'homeScreen') {
-                homeBtn.style.display = 'none';
-            } else {
-                homeBtn.style.display = 'flex';
-            }
-            
-            // Load screen-specific data
-            if (screenId === 'strawberryScreen') {
-                loadStrawberryScreen();
-            } else if (screenId === 'recordsScreen') {
-                loadRecordsScreen();
-            } else if (screenId === 'pickingSettingsScreen') {
-                loadPickingSettingsScreen();
-            } else if (screenId === 'dataSettingsScreen') {
-                loadDataSettingsScreen();
-            } else if (screenId === 'enrollEmployeeScreen') {
-                loadEnrollEmployeeScreen();
-            } else if (screenId === 'clockInScreen') {
-                loadClockScreen('in');
-            } else if (screenId === 'clockOutScreen') {
-                loadClockScreen('out');
-            } else if (screenId === 'printStickersScreen') {
-                loadPrintStickersScreen();
-            } else if (screenId === 'timeRecordsScreen') {
-                loadTimeRecordsScreen();
-            }
-        }
+        // ============= STRAWBERRY SCAN SCREEN =============
+        let currentBatchCrates = 0;
         
-        function goHome() {
-            navigateToScreen('homeScreen');
-        }
-        
-        // ============= TOAST NOTIFICATIONS =============
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-        
-        // ============= UTILITY FUNCTIONS =============
-        function normalizeList(text) {
-            return text.split('\n')
-                .map(item => item.trim())
-                .filter(item => item.length > 0);
-        }
-        
-        function generateEmployeeQRCode(employeeName) {
-            // Return the employee name as the QR code content
-            return employeeName;
-        }
-        
-        // ============= EMPLOYEE FUNCTIONS =============
-        function loadEnrollEmployeeScreen() {
-            document.getElementById('employeeName').value = '';
-            document.getElementById('employeePhone').value = '';
-            document.getElementById('employeeEmail').value = '';
-        }
-        
-        function enrollEmployee() {
-            const name = document.getElementById('employeeName').value.trim();
-            const phone = document.getElementById('employeePhone').value.trim();
-            const email = document.getElementById('employeeEmail').value.trim();
-            
-            if (!name) {
-                showToast('Please enter employee name');
-                return;
-            }
-            
-            const employees = getFromStorage('employees', []);
-            
-            // Check if employee already exists
-            if (employees.find(emp => emp.name.toLowerCase() === name.toLowerCase())) {
-                showToast('Employee with this name already exists');
-                return;
-            }
-            
-            const newEmployee = {
-                id: Date.now().toString(),
-                name: name,
-                phone: phone,
-                email: email,
-                qrCode: generateEmployeeQRCode(name),
-                enrolledDate: new Date().toISOString(),
-                photo: null
-            };
-            
-            employees.push(newEmployee);
-            saveToStorage('employees', employees);
-            
-            showToast(`Employee ${name} enrolled successfully!`);
-            loadEnrollEmployeeScreen();
-        }
-        
-        function loadClockScreen(action) {
-            const employees = getFromStorage('employees', []);
-            const gridId = action === 'in' ? 'clockInEmployeeGrid' : 'clockOutEmployeeGrid';
-            const grid = document.getElementById(gridId);
-            
-            if (employees.length === 0) {
-                grid.innerHTML = '<p style="text-align: center; color: #666;">No employees enrolled yet. Please enrol employees first.</p>';
-                return;
-            }
-            
-            grid.innerHTML = employees.map(emp => `
-                <div class="employee-tile" onclick="selectEmployeeForClock('${emp.id}', '${action}')">
-                    <div class="employee-photo">
-                        ${emp.photo ? `<img src="${emp.photo}" alt="${emp.name}">` : '👤'}
-                    </div>
-                    <div class="employee-name">${emp.name}</div>
-                </div>
-            `).join('');
-        }
-        
-        function selectEmployeeForClock(employeeId, action) {
-            currentClockEmployee = employeeId;
-            currentClockAction = action;
-            openClockCamera();
-        }
-        
-        function openClockCamera() {
-            const modal = document.getElementById('clockCameraModal');
-            const video = document.getElementById('clockVideo');
-            const header = document.getElementById('clockModalHeader');
-            
-            header.textContent = currentClockAction === 'in' ? 'Clock In - Take Photo' : 'Clock Out - Take Photo';
-            modal.classList.add('active');
-            
-            // Reset UI
-            video.style.display = 'block';
-            document.getElementById('clockPhotoPreview').style.display = 'none';
-            document.getElementById('clockCaptureBtn').style.display = 'inline-block';
-            document.getElementById('clockConfirmBtn').style.display = 'none';
-            document.getElementById('clockRetakeBtn').style.display = 'none';
-            
-            // Start camera
-            navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'user' },
-                audio: false 
-            })
-            .then(stream => {
-                clockPhotoStream = stream;
-                video.srcObject = stream;
-            })
-            .catch(err => {
-                showToast('Could not access camera');
-                closeClockCamera();
-            });
-        }
-        
-        function captureClockPhoto() {
-            const video = document.getElementById('clockVideo');
-            const preview = document.getElementById('clockPhotoPreview');
-            
-            // Create canvas to capture frame
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
-            
-            // Get image data
-            clockPhotoData = canvas.toDataURL('image/jpeg');
-            
-            // Show preview
-            preview.src = clockPhotoData;
-            preview.style.display = 'block';
-            video.style.display = 'none';
-            
-            // Update buttons
-            document.getElementById('clockCaptureBtn').style.display = 'none';
-            document.getElementById('clockConfirmBtn').style.display = 'inline-block';
-            document.getElementById('clockRetakeBtn').style.display = 'inline-block';
-        }
-        
-        function retakeClockPhoto() {
-            const video = document.getElementById('clockVideo');
-            const preview = document.getElementById('clockPhotoPreview');
-            
-            video.style.display = 'block';
-            preview.style.display = 'none';
-            clockPhotoData = null;
-            
-            document.getElementById('clockCaptureBtn').style.display = 'inline-block';
-            document.getElementById('clockConfirmBtn').style.display = 'none';
-            document.getElementById('clockRetakeBtn').style.display = 'none';
-        }
-        
-        function confirmClockPhoto() {
-            if (!clockPhotoData) return;
-            
-            const employees = getFromStorage('employees', []);
-            const employee = employees.find(emp => emp.id === currentClockEmployee);
-            
-            if (!employee) {
-                showToast('Employee not found');
-                closeClockCamera();
-                return;
-            }
-            
-            // Update employee photo
-            employee.photo = clockPhotoData;
-            saveToStorage('employees', employees);
-            
-            // Record time entry
-            const timeRecords = getFromStorage('timeRecords', []);
-            timeRecords.push({
-                employeeId: employee.id,
-                employeeName: employee.name,
-                action: currentClockAction,
-                timestamp: new Date().toISOString(),
-                photo: clockPhotoData
-            });
-            saveToStorage('timeRecords', timeRecords);
-            
-            showToast(`${employee.name} clocked ${currentClockAction} successfully!`);
-            closeClockCamera();
-            navigateToScreen('clockInOutMenuScreen');
-        }
-        
-        function closeClockCamera() {
-            if (clockPhotoStream) {
-                clockPhotoStream.getTracks().forEach(track => track.stop());
-                clockPhotoStream = null;
-            }
-            clockPhotoData = null;
-            document.getElementById('clockCameraModal').classList.remove('active');
-        }
-        
-        function loadPrintStickersScreen() {
-            const employees = getFromStorage('employees', []);
-            const select = document.getElementById('stickerEmployee');
-            
-            select.innerHTML = '<option value="">Select Employee</option>' +
-                employees.map(emp => `<option value="${emp.id}">${emp.name}</option>`).join('');
-            
-            document.getElementById('stickerQuantity').value = 10;
-            document.getElementById('stickerPreview').innerHTML = '';
-        }
-        
-        function printStickers() {
-            const employeeId = document.getElementById('stickerEmployee').value;
-            const quantity = parseInt(document.getElementById('stickerQuantity').value);
-            
-            if (!employeeId) {
-                showToast('Please select an employee');
-                return;
-            }
-            
-            if (!quantity || quantity < 1) {
-                showToast('Please enter a valid quantity');
-                return;
-            }
-            
-            const employees = getFromStorage('employees', []);
-            const employee = employees.find(emp => emp.id === employeeId);
-            
-            if (!employee) {
-                showToast('Employee not found');
-                return;
-            }
-            
-            // Generate QR code using a simple library-free approach
-            // For production, you'd want to use a proper QR code library
-            const qrData = employee.qrCode;
-            
-            // Create sticker preview
-            const preview = document.getElementById('stickerPreview');
-            let html = '<h3 style="margin-top: 30px;">Sticker Preview</h3>';
-            html += '<p style="color: #666; margin-bottom: 20px;">Stickers ready to print (placeholder - implement actual QR code generation)</p>';
-            html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px;">';
-            
-            for (let i = 0; i < Math.min(quantity, 12); i++) {
-                html += `
-                    <div style="border: 2px solid #ddd; padding: 15px; text-align: center; background: white; border-radius: 8px;">
-                        <div style="width: 100px; height: 100px; background: #f0f0f0; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #666;">
-                            QR Code<br>${employee.name}
-                        </div>
-                        <div style="font-weight: 500;">${employee.name}</div>
-                    </div>
-                `;
-            }
-            
-            html += '</div>';
-            
-            if (quantity > 12) {
-                html += `<p style="margin-top: 15px; color: #666;">+ ${quantity - 12} more stickers</p>`;
-            }
-            
-            html += '<div class="btn-group"><button class="btn btn-primary" onclick="window.print()">🖨️ Print</button></div>';
-            
-            preview.innerHTML = html;
-            showToast(`Generated ${quantity} stickers for ${employee.name}`);
-        }
-        
-        function loadTimeRecordsScreen() {
-            // Load employee filter
-            const employees = getFromStorage('employees', []);
-            const select = document.getElementById('timeRecordsEmployee');
-            select.innerHTML = '<option value="all">All Employees</option>' +
-                employees.map(emp => `<option value="${emp.id}">${emp.name}</option>`).join('');
-            
-            loadTimeRecords();
-        }
-        
-        function loadTimeRecords() {
-            const filter = document.getElementById('timeRecordsFilter').value;
-            const employeeFilter = document.getElementById('timeRecordsEmployee').value;
-            let records = getFromStorage('timeRecords', []);
-            
-            // Apply filters
-            const now = new Date();
-            records = records.filter(record => {
-                const recordDate = new Date(record.timestamp);
-                
-                // Time filter
-                let timeMatch = true;
-                if (filter === 'today') {
-                    timeMatch = recordDate.toDateString() === now.toDateString();
-                } else if (filter === 'week') {
-                    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    timeMatch = recordDate >= weekAgo;
-                } else if (filter === 'month') {
-                    timeMatch = recordDate.getMonth() === now.getMonth() && 
-                               recordDate.getFullYear() === now.getFullYear();
-                }
-                
-                // Employee filter
-                const employeeMatch = employeeFilter === 'all' || record.employeeId === employeeFilter;
-                
-                return timeMatch && employeeMatch;
-            });
-            
-            // Sort by timestamp descending
-            records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            
-            // Display records
-            const container = document.getElementById('timeRecordsContainer');
-            
-            if (records.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No time records found</p>';
-                return;
-            }
-            
-            container.innerHTML = `
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Employee</th>
-                                <th>Action</th>
-                                <th>Date & Time</th>
-                                <th>Photo</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${records.map(record => `
-                                <tr>
-                                    <td>${record.employeeName}</td>
-                                    <td>${record.action === 'in' ? '✅ Clock In' : '🚪 Clock Out'}</td>
-                                    <td>${new Date(record.timestamp).toLocaleString()}</td>
-                                    <td>
-                                        ${record.photo ? `<img src="${record.photo}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">` : '-'}
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
-        
-        function exportTimeRecords() {
-            const filter = document.getElementById('timeRecordsFilter').value;
-            const employeeFilter = document.getElementById('timeRecordsEmployee').value;
-            let records = getFromStorage('timeRecords', []);
-            
-            // Apply same filters
-            const now = new Date();
-            records = records.filter(record => {
-                const recordDate = new Date(record.timestamp);
-                
-                let timeMatch = true;
-                if (filter === 'today') {
-                    timeMatch = recordDate.toDateString() === now.toDateString();
-                } else if (filter === 'week') {
-                    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    timeMatch = recordDate >= weekAgo;
-                } else if (filter === 'month') {
-                    timeMatch = recordDate.getMonth() === now.getMonth() && 
-                               recordDate.getFullYear() === now.getFullYear();
-                }
-                
-                const employeeMatch = employeeFilter === 'all' || record.employeeId === employeeFilter;
-                
-                return timeMatch && employeeMatch;
-            });
-            
-            if (records.length === 0) {
-                showToast('No records to export');
-                return;
-            }
-            
-            // Create CSV
-            const headers = 'timestamp,employee_name,action';
-            const rows = records.map(r => 
-                `${r.timestamp},${r.employeeName},${r.action}`
-            );
-            
-            const csv = headers + '\n' + rows.join('\n');
-            
-            // Download
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `time_records_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            showToast(`Exported ${records.length} records`);
-        }
-        
-        // ============= STRAWBERRY SCREEN =============
         function loadStrawberryScreen() {
             const varieties = getFromStorage('varieties', []);
             const blocks = getFromStorage('blocks', []);
+            const context = getFromStorage('scanContext', {});
+            const batchId = getFromStorage('currentBatchId', 1);
             
-            // Populate variety dropdown
-            const varietySelect = document.getElementById('variety');
-            varietySelect.innerHTML = '<option value="">Select Variety</option>' + 
-                varieties.map(v => `<option value="${v}">${v}</option>`).join('');
-            
-            // Populate block dropdown
-            const blockSelect = document.getElementById('block');
-            blockSelect.innerHTML = '<option value="">Select Block</option>' + 
-                blocks.map(b => `<option value="${b}">${b}</option>`).join('');
-            
-            // Update batch pill
+            currentBatchCrates = 0;
             updateBatchPill();
             
-            // Reset picker tallies for new session
-            pickerTallies = {};
-            updatePickerTally();
+            const varietySelect = document.getElementById('variety');
+            varietySelect.innerHTML = '<option value="">Select Variety</option>';
+            varieties.forEach(v => {
+                const option = document.createElement('option');
+                option.value = v;
+                option.textContent = v;
+                if (context.variety === v) option.selected = true;
+                varietySelect.appendChild(option);
+            });
+            
+            const blockSelect = document.getElementById('block');
+            blockSelect.innerHTML = '<option value="">Select Block</option>';
+            blocks.forEach(b => {
+                const option = document.createElement('option');
+                option.value = b;
+                option.textContent = b;
+                if (context.block === b) option.selected = true;
+                blockSelect.appendChild(option);
+            });
+            
+            if (context.size) {
+                document.getElementById('size').value = context.size;
+            }
         }
         
         function updateBatchPill() {
             const batchId = getFromStorage('currentBatchId', 1);
             document.getElementById('batchPill').textContent = `Batch #${batchId} - ${currentBatchCrates} crates`;
+            document.getElementById('scannerBatchLabel').textContent = `Batch #${batchId}`;
         }
         
-        function updatePickerTally() {
-            const container = document.getElementById('pickerTallyContainer');
-            const list = document.getElementById('pickerTallyList');
+        function saveContext() {
+            const context = {
+                variety: document.getElementById('variety').value,
+                block: document.getElementById('block').value,
+                size: document.getElementById('size').value
+            };
+            saveToStorage('scanContext', context);
+        }
+        
+        // ============= MANUAL ENTRY SCREEN =============
+        function loadManualEntryScreen() {
+            const varieties = getFromStorage('varieties', []);
+            const blocks = getFromStorage('blocks', []);
             
-            if (Object.keys(pickerTallies).length === 0) {
-                container.style.display = 'none';
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('manualDate').value = today;
+            
+            const varietySelect = document.getElementById('manualVariety');
+            varietySelect.innerHTML = '<option value="">Select Variety</option>';
+            varieties.forEach(v => {
+                const option = document.createElement('option');
+                option.value = v;
+                option.textContent = v;
+                varietySelect.appendChild(option);
+            });
+            
+            const blockSelect = document.getElementById('manualBlock');
+            blockSelect.innerHTML = '<option value="">Select Block</option>';
+            blocks.forEach(b => {
+                const option = document.createElement('option');
+                option.value = b;
+                option.textContent = b;
+                blockSelect.appendChild(option);
+            });
+        }
+        
+        function saveManualEntry() {
+            const date = document.getElementById('manualDate').value;
+            const picker = document.getElementById('manualPicker').value.trim();
+            const variety = document.getElementById('manualVariety').value;
+            const block = document.getElementById('manualBlock').value;
+            const size = document.getElementById('manualSize').value;
+            const crates = parseInt(document.getElementById('manualCrates').value) || 0;
+            const partialPunnets = parseInt(document.getElementById('manualPartialPunnets').value) || 0;
+            
+            if (!date || !picker || !variety || !block || !size) {
+                showToast('Please fill in all required fields');
                 return;
             }
             
-            container.style.display = 'block';
-            list.innerHTML = Object.entries(pickerTallies).map(([picker, count]) => `
-                <div class="picker-tally-item">
-                    <span class="picker-tally-name">${picker}</span>
-                    <div class="picker-tally-count">
-                        <input type="number" 
-                               value="${count}" 
-                               min="0"
-                               onchange="updatePickerTallyCount('${picker}', this.value)">
-                        <span>crates</span>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        function updatePickerTallyCount(picker, newCount) {
-            const count = parseInt(newCount) || 0;
-            if (count === 0) {
-                delete pickerTallies[picker];
-            } else {
-                pickerTallies[picker] = count;
+            if (crates === 0 && partialPunnets === 0) {
+                showToast('Please enter at least some crates or punnets');
+                return;
             }
-            updatePickerTally();
             
-            // Recalculate total crates
-            currentBatchCrates = Object.values(pickerTallies).reduce((sum, count) => sum + count, 0);
-            updateBatchPill();
+            const settings = getFromStorage('punnetSettings', {});
+            const sizeSettings = settings[size] || { punnetsPerCrate: 20, punnetWeightG: 400 };
+            
+            const fullCratePunnets = crates * sizeSettings.punnetsPerCrate;
+            const totalPunnets = fullCratePunnets + partialPunnets;
+            const totalWeightG = totalPunnets * sizeSettings.punnetWeightG;
+            const totalWeightKg = totalWeightG / 1000;
+            
+            const batchId = getFromStorage('currentBatchId', 1);
+            
+            const record = {
+                id: Date.now() + '-manual',
+                timestamp: new Date(date).toISOString(),
+                batch_id: batchId,
+                picker_id: picker,
+                crate_id: `MANUAL-${Date.now()}`,
+                variety: variety,
+                block: block,
+                size: size,
+                punnets_per_crate: sizeSettings.punnetsPerCrate,
+                punnet_weight_g: sizeSettings.punnetWeightG,
+                is_partial: partialPunnets > 0,
+                partial_punnets: partialPunnets,
+                crate_count: crates,
+                total_punnets: totalPunnets,
+                total_weight_kg: totalWeightKg,
+                scan_raw: 'MANUAL_ENTRY'
+            };
+            
+            const records = getFromStorage('harvestRecords', []);
+            records.push(record);
+            saveToStorage('harvestRecords', records);
+            
+            saveToStorage('currentBatchId', batchId + 1);
+            
+            showToast(`Manual entry saved! ${crates} crates + ${partialPunnets} punnets`);
+            
+            document.getElementById('manualPicker').value = '';
+            document.getElementById('manualCrates').value = '0';
+            document.getElementById('manualPartialPunnets').value = '';
+            
+            navigateToScreen('recordsScreen');
         }
         
-        function openScanner() {
+        // ============= SCANNER FUNCTIONALITY =============
+        let codeReader = null;
+        let currentStream = null;
+        let detectedCode = null;
+        let scanPaused = false;
+        
+        document.getElementById('partialCrate').addEventListener('change', function() {
+            const punnetsInput = document.getElementById('manualPunnets');
+            if (this.checked) {
+                punnetsInput.style.display = 'block';
+                punnetsInput.focus();
+            } else {
+                punnetsInput.style.display = 'none';
+                punnetsInput.value = '';
+            }
+        });
+        
+        async function openScanner() {
             const variety = document.getElementById('variety').value;
             const block = document.getElementById('block').value;
             const size = document.getElementById('size').value;
             
             if (!variety || !block || !size) {
-                showToast('Please select variety, block, and size first');
+                showToast('Please select variety, block, and size');
                 return;
             }
             
-            // Update batch label
-            const batchId = getFromStorage('currentBatchId', 1);
-            document.getElementById('scannerBatchLabel').textContent = `Batch #${batchId}`;
-            
-            // Open scanner overlay
+            saveContext();
             document.getElementById('scannerOverlay').classList.add('active');
-            
-            // Initialize scanner
-            initializeScanner();
+            await initializeScanner();
         }
         
         async function initializeScanner() {
@@ -1664,17 +1391,13 @@
             try {
                 statusElement.textContent = 'Requesting camera permission...';
                 
-                // Create code reader
                 codeReader = new ZXing.BrowserMultiFormatReader();
-                
-                // Get video devices
                 const devices = await codeReader.listVideoInputDevices();
                 
                 if (devices.length === 0) {
                     throw new Error('No camera devices found');
                 }
                 
-                // Prefer back camera
                 let selectedDevice = devices[0].deviceId;
                 for (const device of devices) {
                     if (device.label.toLowerCase().includes('back') || 
@@ -1687,7 +1410,6 @@
                 
                 statusElement.textContent = 'Starting camera...';
                 
-                // Start scanning
                 scanPaused = false;
                 await codeReader.decodeFromVideoDevice(selectedDevice, 'preview', (result, err) => {
                     if (result && !scanPaused) {
@@ -1695,7 +1417,6 @@
                     }
                 });
                 
-                // Get the stream for later cleanup
                 const videoElement = document.getElementById('preview');
                 currentStream = videoElement.srcObject;
                 
@@ -1717,11 +1438,9 @@
             const statusElement = document.getElementById('scannerStatus');
             const captureButton = document.getElementById('captureButton');
             
-            // Show detected code
             statusElement.textContent = `Detected: ${code.substring(0, 50)}${code.length > 50 ? '...' : ''} - Tap Capture`;
             captureButton.disabled = false;
             
-            // Vibrate if available
             if (navigator.vibrate) {
                 navigator.vibrate(100);
             }
@@ -1733,10 +1452,8 @@
             const statusElement = document.getElementById('scannerStatus');
             const captureButton = document.getElementById('captureButton');
             
-            // Parse QR code
             const parsed = parseQRCode(detectedCode);
             
-            // Check for duplicate crate today
             if (parsed.crate_id && isDuplicateCrateToday(parsed.crate_id)) {
                 if (!confirm(`Crate ${parsed.crate_id} was already scanned today. Add anyway?`)) {
                     resumeScanning();
@@ -1744,207 +1461,599 @@
                 }
             }
             
-            // Create record
             const record = createHarvestRecord(parsed);
             
-            // Save record
             const records = getFromStorage('harvestRecords', []);
             records.push(record);
             saveToStorage('harvestRecords', records);
             
-            // Update picker tally
-            const picker = parsed.picker_id || detectedCode;
-            if (!pickerTallies[picker]) {
-                pickerTallies[picker] = 0;
-            }
-            pickerTallies[picker]++;
-            updatePickerTally();
-            
-            // Update UI
             currentBatchCrates++;
             updateBatchPill();
             
-            statusElement.textContent = `Added: ${record.kg.toFixed(1)}kg - ${currentBatchCrates} crates total`;
-            showToast(`Added: ${record.kg.toFixed(1)}kg`);
+            showToast(`Captured! Picker: ${record.picker_id}, Crate: ${record.crate_id}`);
             
-            // Resume scanning after short delay
-            setTimeout(resumeScanning, 1000);
+            resumeScanning();
         }
         
-        function parseQRCode(code) {
-            // Try to parse as JSON first
-            try {
-                const parsed = JSON.parse(code);
-                return parsed;
-            } catch (e) {
-                // If not JSON, treat as simple text (picker ID or crate ID)
-                // Check if it's an employee name
-                const employees = getFromStorage('employees', []);
-                const employee = employees.find(emp => emp.qrCode === code || emp.name === code);
-                
-                return {
-                    picker_id: employee ? employee.name : code,
-                    crate_id: code
-                };
+        function resumeScanning() {
+            detectedCode = null;
+            scanPaused = false;
+            document.getElementById('scannerStatus').textContent = 'Ready to scan...';
+            document.getElementById('captureButton').disabled = true;
+            document.getElementById('partialCrate').checked = false;
+            document.getElementById('manualPunnets').style.display = 'none';
+            document.getElementById('manualPunnets').value = '';
+        }
+        
+        function parseQRCode(text) {
+            const result = {
+                picker_id: text,
+                crate_id: null,
+                scan_raw: text
+            };
+            
+            const pairs = text.split(/[;,\n]+/);
+            for (const pair of pairs) {
+                const [key, value] = pair.split('=').map(s => s.trim());
+                if (key && value) {
+                    const lowerKey = key.toLowerCase();
+                    if (lowerKey.includes('picker') || lowerKey.includes('employee') || lowerKey.includes('worker')) {
+                        result.picker_id = value;
+                    } else if (lowerKey.includes('crate') || lowerKey.includes('box') || lowerKey.includes('id')) {
+                        result.crate_id = value;
+                    }
+                }
             }
+            
+            if (!result.crate_id) {
+                result.crate_id = text;
+            }
+            
+            return result;
         }
         
         function isDuplicateCrateToday(crateId) {
             const records = getFromStorage('harvestRecords', []);
             const today = new Date().toDateString();
             
-            return records.some(record => 
-                record.crate_id === crateId && 
-                new Date(record.timestamp).toDateString() === today
-            );
+            return records.some(record => {
+                const recordDate = new Date(record.timestamp).toDateString();
+                return recordDate === today && record.crate_id === crateId;
+            });
         }
         
         function createHarvestRecord(parsed) {
-            const variety = document.getElementById('variety').value;
-            const block = document.getElementById('block').value;
-            const size = document.getElementById('size').value;
-            const isPartial = document.getElementById('scannerPartialCrate').checked;
-            const manualPunnets = isPartial ? parseInt(document.getElementById('scannerManualPunnets').value) : null;
-            
-            const punnetSettings = getFromStorage('punnetSettings', {});
-            const sizeSettings = punnetSettings[size];
-            
-            let punnetsTotal;
-            if (isPartial && manualPunnets) {
-                punnetsTotal = manualPunnets;
-            } else {
-                punnetsTotal = sizeSettings.punnetsPerCrate;
-            }
-            
-            const kg = (punnetsTotal * sizeSettings.punnetWeightG) / 1000;
+            const context = getFromStorage('scanContext', {});
+            const settings = getFromStorage('punnetSettings', {});
             const batchId = getFromStorage('currentBatchId', 1);
             
+            const sizeSettings = settings[context.size] || { punnetsPerCrate: 20, punnetWeightG: 400 };
+            
+            const isPartial = document.getElementById('partialCrate').checked;
+            const partialPunnets = isPartial ? parseInt(document.getElementById('manualPunnets').value) || 0 : 0;
+            
+            let totalPunnets, totalWeightKg;
+            if (isPartial && partialPunnets > 0) {
+                totalPunnets = partialPunnets;
+                totalWeightKg = (partialPunnets * sizeSettings.punnetWeightG) / 1000;
+            } else {
+                totalPunnets = sizeSettings.punnetsPerCrate;
+                totalWeightKg = (sizeSettings.punnetsPerCrate * sizeSettings.punnetWeightG) / 1000;
+            }
+            
             return {
+                id: Date.now(),
                 timestamp: new Date().toISOString(),
-                picker_id: parsed.picker_id || detectedCode,
-                crate_id: parsed.crate_id || detectedCode,
-                variety: variety,
-                block: block,
-                size: size,
-                punnets_per_crate: sizeSettings.punnetsPerCrate,
-                crate_qty: 1,
-                is_partial: isPartial,
-                manual_punnets: manualPunnets,
-                punnets_total: punnetsTotal,
-                punnet_weight_g: sizeSettings.punnetWeightG,
-                kg: kg,
                 batch_id: batchId,
-                scan_raw: detectedCode
+                picker_id: parsed.picker_id,
+                crate_id: parsed.crate_id,
+                variety: context.variety,
+                block: context.block,
+                size: context.size,
+                punnets_per_crate: sizeSettings.punnetsPerCrate,
+                punnet_weight_g: sizeSettings.punnetWeightG,
+                is_partial: isPartial,
+                partial_punnets: partialPunnets,
+                total_punnets: totalPunnets,
+                total_weight_kg: totalWeightKg,
+                scan_raw: parsed.scan_raw
             };
         }
         
-        function resumeScanning() {
-            scanPaused = false;
-            detectedCode = null;
-            document.getElementById('captureButton').disabled = true;
-            document.getElementById('scannerStatus').textContent = 'Ready to scan...';
-        }
-        
         function moreCrates() {
-            // Just resume scanning for more crates
             resumeScanning();
-            showToast('Scan more crates...');
         }
         
         function completeBatch() {
-            if (currentBatchCrates === 0) {
-                showToast('No crates in current batch');
-                return;
-            }
+            const currentBatch = getFromStorage('currentBatchId', 1);
+            saveToStorage('currentBatchId', currentBatch + 1);
             
-            const currentBatchId = getFromStorage('currentBatchId', 1);
-            saveToStorage('currentBatchId', currentBatchId + 1);
-            
-            showToast(`Batch #${currentBatchId} completed with ${currentBatchCrates} crates`);
-            
-            // Close scanner and reset
             closeScanner();
-            
-            // Reset for new batch
-            currentBatchCrates = 0;
-            pickerTallies = {};
-            updateBatchPill();
-            updatePickerTally();
-            
-            // Reset form
-            document.getElementById('partialCrate').checked = false;
-            document.getElementById('manualPunnets').style.display = 'none';
-            document.getElementById('manualPunnetsInput').value = '';
+            showToast(`Batch #${currentBatch} complete! ${currentBatchCrates} crates scanned`);
+            navigateToScreen('recordsScreen');
         }
         
         function closeScanner() {
-            // Stop code reader
             if (codeReader) {
                 codeReader.reset();
                 codeReader = null;
             }
             
-            // Stop video stream
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
                 currentStream = null;
             }
             
-            // Reset scanner state
-            scanPaused = false;
-            detectedCode = null;
-            
-            // Hide overlay
             document.getElementById('scannerOverlay').classList.remove('active');
+            
+            detectedCode = null;
+            scanPaused = false;
+            document.getElementById('captureButton').disabled = true;
+            document.getElementById('partialCrate').checked = false;
+            document.getElementById('manualPunnets').style.display = 'none';
+            document.getElementById('manualPunnets').value = '';
         }
         
-        function finishBatch() {
-            // This is now just a wrapper for completeBatch when not in scanner
-            completeBatch();
+        // ============= EMPLOYEE MODULE =============
+        let currentEmployeeForClock = null;
+        let currentClockAction = null;
+        let clockCameraStream = null;
+        let capturedPhotoBlob = null;
+        
+        function generateEmployeeQR() {
+            const name = document.getElementById('employeeName').value.trim();
+            const phone = document.getElementById('employeePhone').value.trim();
+            const email = document.getElementById('employeeEmail').value.trim();
+            
+            if (!name) {
+                showToast('Please enter employee name');
+                return;
+            }
+            
+            // Generate unique employee ID
+            const employees = getFromStorage('employees', []);
+            const employeeId = 'EMP' + String(employees.length + 1).padStart(3, '0');
+            
+            // Show QR code preview
+            const qrPreview = document.getElementById('qrCodePreview');
+            const qrCanvas = document.getElementById('qrCanvas');
+            const qrText = document.getElementById('qrCodeText');
+            
+            qrCanvas.innerHTML = '';
+            
+            // Generate QR code using QRCode.js
+            new QRCode(qrCanvas, {
+                text: employeeId,
+                width: 200,
+                height: 200
+            });
+            
+            qrText.textContent = employeeId;
+            qrPreview.style.display = 'block';
+            
+            // Show enrol button
+            document.getElementById('enrollBtn').style.display = 'inline-block';
+            
+            // Store temp employee data
+            window.tempEmployee = {
+                id: employeeId,
+                name: name,
+                phone: phone,
+                email: email,
+                qrCode: employeeId
+            };
+        }
+        
+        function enrollEmployee() {
+            if (!window.tempEmployee) {
+                showToast('Please generate QR code first');
+                return;
+            }
+            
+            const employees = getFromStorage('employees', []);
+            employees.push(window.tempEmployee);
+            saveToStorage('employees', employees);
+            
+            showToast('Employee enrolled successfully!');
+            
+            // Reset form
+            document.getElementById('employeeName').value = '';
+            document.getElementById('employeePhone').value = '';
+            document.getElementById('employeeEmail').value = '';
+            document.getElementById('qrCodePreview').style.display = 'none';
+            document.getElementById('enrollBtn').style.display = 'none';
+            window.tempEmployee = null;
+        }
+        
+        function loadClockInScreen() {
+            const employees = getFromStorage('employees', []);
+            const grid = document.getElementById('clockInEmployeeGrid');
+            
+            grid.innerHTML = '';
+            
+            if (employees.length === 0) {
+                grid.innerHTML = '<p style="text-align: center; color: #666;">No employees enrolled yet</p>';
+                return;
+            }
+            
+            employees.forEach(emp => {
+                const card = document.createElement('div');
+                card.className = 'employee-card';
+                card.onclick = () => openClockCamera(emp, 'in');
+                
+                const photo = document.createElement('div');
+                photo.className = 'employee-photo';
+                
+                // Check if employee has a photo from today
+                const timeRecords = getFromStorage('timeRecords', []);
+                const today = new Date().toDateString();
+                const todayRecord = timeRecords.find(r => 
+                    r.employee_id === emp.id && 
+                    new Date(r.timestamp).toDateString() === today &&
+                    r.photo
+                );
+                
+                if (todayRecord && todayRecord.photo) {
+                    const img = document.createElement('img');
+                    img.src = todayRecord.photo;
+                    photo.appendChild(img);
+                } else {
+                    photo.textContent = '👤';
+                }
+                
+                const name = document.createElement('div');
+                name.className = 'employee-name';
+                name.textContent = emp.name;
+                
+                card.appendChild(photo);
+                card.appendChild(name);
+                grid.appendChild(card);
+            });
+        }
+        
+        function loadClockOutScreen() {
+            const employees = getFromStorage('employees', []);
+            const grid = document.getElementById('clockOutEmployeeGrid');
+            
+            grid.innerHTML = '';
+            
+            if (employees.length === 0) {
+                grid.innerHTML = '<p style="text-align: center; color: #666;">No employees enrolled yet</p>';
+                return;
+            }
+            
+            employees.forEach(emp => {
+                const card = document.createElement('div');
+                card.className = 'employee-card';
+                card.onclick = () => openClockCamera(emp, 'out');
+                
+                const photo = document.createElement('div');
+                photo.className = 'employee-photo';
+                
+                const timeRecords = getFromStorage('timeRecords', []);
+                const today = new Date().toDateString();
+                const todayRecord = timeRecords.find(r => 
+                    r.employee_id === emp.id && 
+                    new Date(r.timestamp).toDateString() === today &&
+                    r.photo
+                );
+                
+                if (todayRecord && todayRecord.photo) {
+                    const img = document.createElement('img');
+                    img.src = todayRecord.photo;
+                    photo.appendChild(img);
+                } else {
+                    photo.textContent = '👤';
+                }
+                
+                const name = document.createElement('div');
+                name.className = 'employee-name';
+                name.textContent = emp.name;
+                
+                card.appendChild(photo);
+                card.appendChild(name);
+                grid.appendChild(card);
+            });
+        }
+        
+        async function openClockCamera(employee, action) {
+            currentEmployeeForClock = employee;
+            currentClockAction = action;
+            
+            const modal = document.getElementById('clockCameraModal');
+            const header = document.getElementById('clockModalHeader');
+            const video = document.getElementById('clockVideo');
+            const canvas = document.getElementById('clockCanvas');
+            const preview = document.getElementById('clockPhotoPreview');
+            
+            header.textContent = action === 'in' ? 'Clock In - Take Photo' : 'Clock Out - Take Photo';
+            
+            video.style.display = 'block';
+            canvas.style.display = 'none';
+            preview.style.display = 'none';
+            
+            document.getElementById('clockCaptureBtn').style.display = 'inline-block';
+            document.getElementById('clockConfirmBtn').style.display = 'none';
+            document.getElementById('clockRetakeBtn').style.display = 'none';
+            
+            modal.classList.add('active');
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' },
+                    audio: false 
+                });
+                clockCameraStream = stream;
+                video.srcObject = stream;
+            } catch (error) {
+                showToast('Could not access camera');
+                closeClockCamera();
+            }
+        }
+        
+        function captureClockPhoto() {
+            const video = document.getElementById('clockVideo');
+            const canvas = document.getElementById('clockCanvas');
+            const preview = document.getElementById('clockPhotoPreview');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            canvas.toBlob(blob => {
+                capturedPhotoBlob = blob;
+                const url = URL.createObjectURL(blob);
+                preview.src = url;
+                
+                video.style.display = 'none';
+                preview.style.display = 'block';
+                
+                document.getElementById('clockCaptureBtn').style.display = 'none';
+                document.getElementById('clockConfirmBtn').style.display = 'inline-block';
+                document.getElementById('clockRetakeBtn').style.display = 'inline-block';
+            });
+        }
+        
+        function retakeClockPhoto() {
+            const video = document.getElementById('clockVideo');
+            const preview = document.getElementById('clockPhotoPreview');
+            
+            video.style.display = 'block';
+            preview.style.display = 'none';
+            
+            document.getElementById('clockCaptureBtn').style.display = 'inline-block';
+            document.getElementById('clockConfirmBtn').style.display = 'none';
+            document.getElementById('clockRetakeBtn').style.display = 'none';
+            
+            capturedPhotoBlob = null;
+        }
+        
+        function confirmClockPhoto() {
+            if (!capturedPhotoBlob) return;
+            
+            const reader = new FileReader();
+            reader.onloadend = function() {
+                const photoDataUrl = reader.result;
+                
+                const timeRecord = {
+                    id: Date.now(),
+                    employee_id: currentEmployeeForClock.id,
+                    employee_name: currentEmployeeForClock.name,
+                    action: currentClockAction,
+                    timestamp: new Date().toISOString(),
+                    photo: photoDataUrl
+                };
+                
+                const timeRecords = getFromStorage('timeRecords', []);
+                timeRecords.push(timeRecord);
+                saveToStorage('timeRecords', timeRecords);
+                
+                showToast(`${currentEmployeeForClock.name} clocked ${currentClockAction}!`);
+                closeClockCamera();
+                navigateToScreen('clockInOutMenuScreen');
+            };
+            reader.readAsDataURL(capturedPhotoBlob);
+        }
+        
+        function closeClockCamera() {
+            if (clockCameraStream) {
+                clockCameraStream.getTracks().forEach(track => track.stop());
+                clockCameraStream = null;
+            }
+            
+            document.getElementById('clockCameraModal').classList.remove('active');
+            currentEmployeeForClock = null;
+            currentClockAction = null;
+            capturedPhotoBlob = null;
+        }
+        
+        function loadPrintStickersScreen() {
+            const employees = getFromStorage('employees', []);
+            const select = document.getElementById('stickerEmployee');
+            
+            select.innerHTML = '<option value="">Select Employee</option>';
+            
+            employees.forEach(emp => {
+                const option = document.createElement('option');
+                option.value = emp.id;
+                option.textContent = `${emp.name} (${emp.id})`;
+                select.appendChild(option);
+            });
+        }
+        
+        function generateStickers() {
+            const employeeId = document.getElementById('stickerEmployee').value;
+            const quantity = parseInt(document.getElementById('stickerQuantity').value) || 1;
+            
+            if (!employeeId) {
+                showToast('Please select an employee');
+                return;
+            }
+            
+            const employees = getFromStorage('employees', []);
+            const employee = employees.find(e => e.id === employeeId);
+            
+            if (!employee) {
+                showToast('Employee not found');
+                return;
+            }
+            
+            const preview = document.getElementById('stickerPreview');
+            preview.innerHTML = '<div class="sticker-grid"></div>';
+            const grid = preview.querySelector('.sticker-grid');
+            
+            for (let i = 0; i < quantity; i++) {
+                const sticker = document.createElement('div');
+                sticker.className = 'sticker';
+                
+                const qrDiv = document.createElement('div');
+                qrDiv.className = 'sticker-qr';
+                qrDiv.id = `sticker-qr-${i}`;
+                
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'sticker-name';
+                nameDiv.textContent = employee.name;
+                
+                const idDiv = document.createElement('div');
+                idDiv.textContent = employee.id;
+                idDiv.style.fontSize = '12px';
+                idDiv.style.color = '#666';
+                
+                sticker.appendChild(qrDiv);
+                sticker.appendChild(nameDiv);
+                sticker.appendChild(idDiv);
+                grid.appendChild(sticker);
+                
+                // Generate QR code
+                new QRCode(qrDiv, {
+                    text: employee.qrCode,
+                    width: 128,
+                    height: 128
+                });
+            }
+            
+            document.getElementById('printBtn').style.display = 'inline-block';
+            showToast('Stickers generated! Click Print to print.');
+        }
+        
+        function loadTimeRecords() {
+            const filter = document.getElementById('timeRecordsFilter').value;
+            const timeRecords = getFromStorage('timeRecords', []);
+            const container = document.getElementById('timeRecordsContainer');
+            
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            const filtered = timeRecords.filter(record => {
+                const recordDate = new Date(record.timestamp);
+                
+                if (filter === 'today') {
+                    return recordDate >= today;
+                } else if (filter === 'week') {
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    return recordDate >= weekAgo;
+                } else if (filter === 'month') {
+                    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                    return recordDate >= monthStart;
+                }
+                return true;
+            });
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">No time records found</p>';
+                return;
+            }
+            
+            let html = '<div class="table-container"><table><thead><tr>';
+            html += '<th>Date/Time</th>';
+            html += '<th>Employee</th>';
+            html += '<th>Action</th>';
+            html += '<th>Photo</th>';
+            html += '</tr></thead><tbody>';
+            
+            filtered.reverse().forEach(record => {
+                html += '<tr>';
+                html += `<td>${formatDate(record.timestamp)}</td>`;
+                html += `<td>${record.employee_name}</td>`;
+                html += `<td>${record.action === 'in' ? '✅ Clock In' : '🚪 Clock Out'}</td>`;
+                html += `<td>${record.photo ? '<img src="' + record.photo + '" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">' : '-'}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
         }
         
         // ============= RECORDS SCREEN =============
         function loadRecordsScreen() {
+            const records = getFromStorage('harvestRecords', []);
             const varieties = getFromStorage('varieties', []);
             const blocks = getFromStorage('blocks', []);
             
-            // Populate filter dropdowns
             const varietyFilter = document.getElementById('filterVariety');
-            varietyFilter.innerHTML = '<option value="all">All Varieties</option>' + 
-                varieties.map(v => `<option value="${v}">${v}</option>`).join('');
+            varietyFilter.innerHTML = '<option value="all">All Varieties</option>';
+            varieties.forEach(v => {
+                const option = document.createElement('option');
+                option.value = v;
+                option.textContent = v;
+                varietyFilter.appendChild(option);
+            });
             
             const blockFilter = document.getElementById('filterBlock');
-            blockFilter.innerHTML = '<option value="all">All Blocks</option>' + 
-                blocks.map(b => `<option value="${b}">${b}</option>`).join('');
+            blockFilter.innerHTML = '<option value="all">All Blocks</option>';
+            blocks.forEach(b => {
+                const option = document.createElement('option');
+                option.value = b;
+                option.textContent = b;
+                blockFilter.appendChild(option);
+            });
             
-            applyFilters();
+            document.getElementById('filterTime').onchange = updateRecordsDisplay;
+            document.getElementById('filterVariety').onchange = updateRecordsDisplay;
+            document.getElementById('filterBlock').onchange = updateRecordsDisplay;
+            document.getElementById('filterGroupBy').onchange = updateRecordsDisplay;
+            
+            updateRecordsDisplay();
         }
         
-        function applyFilters() {
+        function updateRecordsDisplay() {
             const records = getFromStorage('harvestRecords', []);
+            const filtered = filterRecords(records);
+            updateKPIs(filtered);
+            
+            const groupBy = document.getElementById('filterGroupBy').value;
+            
+            if (groupBy !== 'none') {
+                displayGroupedRecords(filtered, groupBy);
+            } else {
+                displayRecordsTable(filtered);
+            }
+        }
+        
+        function filterRecords(records) {
             const timeFilter = document.getElementById('filterTime').value;
             const varietyFilter = document.getElementById('filterVariety').value;
             const blockFilter = document.getElementById('filterBlock').value;
-            const groupBy = document.getElementById('filterGroupBy').value;
             
-            // Apply filters
-            let filtered = records.filter(record => {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            return records.filter(record => {
                 const recordDate = new Date(record.timestamp);
-                const today = new Date();
                 
                 let timeMatch = true;
-                switch(timeFilter) {
-                    case 'today':
-                        timeMatch = recordDate.toDateString() === today.toDateString();
-                        break;
-                    case 'week':
-                        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-                        timeMatch = recordDate >= weekAgo;
-                        break;
-                    case 'month':
-                        timeMatch = recordDate.getMonth() === today.getMonth() && 
-                                   recordDate.getFullYear() === today.getFullYear();
-                        break;
+                if (timeFilter === 'today') {
+                    timeMatch = recordDate >= today;
+                } else if (timeFilter === 'week') {
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    timeMatch = recordDate >= weekAgo;
+                } else if (timeFilter === 'month') {
+                    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                    timeMatch = recordDate >= monthStart;
                 }
                 
                 const varietyMatch = varietyFilter === 'all' || record.variety === varietyFilter;
@@ -1952,591 +2061,220 @@
                 
                 return timeMatch && varietyMatch && blockMatch;
             });
+        }
+        
+        function updateKPIs(records) {
+            const totalCrates = records.reduce((sum, r) => sum + (r.crate_count || 1), 0);
+            const totalPunnets = records.reduce((sum, r) => sum + (r.total_punnets || 0), 0);
+            const totalKg = records.reduce((sum, r) => sum + (r.total_weight_kg || 0), 0);
             
-            // Calculate stats
-            let totalCrates = 0;
-            let totalPunnets = 0;
-            let totalKg = 0;
+            const plantsPerBlock = getFromStorage('plantsPerBlock', 1000);
+            const kgPerPlant = plantsPerBlock > 0 ? (totalKg / plantsPerBlock) : 0;
             
-            filtered.forEach(record => {
-                totalCrates++;
-                totalPunnets += record.punnets_total;
-                totalKg += record.kg;
-            });
+            document.getElementById('kpiCrates').textContent = totalCrates;
+            document.getElementById('kpiPunnets').textContent = totalPunnets;
+            document.getElementById('kpiKg').textContent = totalKg.toFixed(2);
+            document.getElementById('kpiKgPerPlant').textContent = kgPerPlant.toFixed(3);
+        }
+        
+        function displayRecordsTable(records) {
+            const container = document.getElementById('recordsTableContainer');
+            document.getElementById('summaryTableContainer').innerHTML = '';
             
-            // Calculate kg per plant
-            const plantsPerBlock = getFromStorage('plantsPerBlock', {});
-            let totalPlants = 0;
-            
-            // Get unique blocks from filtered records
-            const uniqueBlocks = [...new Set(filtered.map(r => r.block))];
-            uniqueBlocks.forEach(block => {
-                totalPlants += plantsPerBlock[block] || 0;
-            });
-            
-            const kgPerPlant = totalPlants > 0 ? totalKg / totalPlants : 0;
-            
-            document.getElementById('statCrates').textContent = totalCrates;
-            document.getElementById('statPunnets').textContent = totalPunnets;
-            document.getElementById('statKg').textContent = totalKg.toFixed(1);
-            document.getElementById('statKgPerPlant').textContent = kgPerPlant.toFixed(2);
-            
-            // Display grouped or detailed records
-            if (groupBy !== 'none') {
-                displayGroupedRecords(filtered, groupBy);
+            if (records.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">No records found</p>';
+                return;
             }
             
-            // Display records table with aggregation by picker and batch
-            displayAggregatedRecords(filtered);
+            let html = '<div class="table-container"><table><thead><tr>';
+            html += '<th>Date/Time</th>';
+            html += '<th>Batch</th>';
+            html += '<th>Picker</th>';
+            html += '<th>Crate ID</th>';
+            html += '<th>Variety</th>';
+            html += '<th>Block</th>';
+            html += '<th>Size</th>';
+            html += '<th>Punnets</th>';
+            html += '<th>Weight (kg)</th>';
+            html += '</tr></thead><tbody>';
+            
+            records.forEach(record => {
+                html += '<tr>';
+                html += `<td>${formatDate(record.timestamp)}</td>`;
+                html += `<td>${record.batch_id}</td>`;
+                html += `<td>${record.picker_id}</td>`;
+                html += `<td>${record.crate_id}</td>`;
+                html += `<td>${record.variety}</td>`;
+                html += `<td>${record.block}</td>`;
+                html += `<td>${record.size}</td>`;
+                html += `<td>${record.total_punnets}${record.is_partial ? ' (partial)' : ''}</td>`;
+                html += `<td>${record.total_weight_kg.toFixed(2)}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
         }
         
         function displayGroupedRecords(records, groupBy) {
-            const grouped = {};
+            const container = document.getElementById('summaryTableContainer');
+            document.getElementById('recordsTableContainer').innerHTML = '';
             
+            if (records.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">No records found</p>';
+                return;
+            }
+            
+            const groups = {};
             records.forEach(record => {
                 const key = record[groupBy];
-                if (!grouped[key]) {
-                    grouped[key] = { crates: 0, punnets: 0, kg: 0 };
+                if (!groups[key]) {
+                    groups[key] = [];
                 }
-                grouped[key].crates++;
-                grouped[key].punnets += record.punnets_total;
-                grouped[key].kg += record.kg;
+                groups[key].push(record);
             });
             
-            const container = document.getElementById('groupedContainer');
-            container.innerHTML = `
-                <h3>Grouped by ${groupBy.charAt(0).toUpperCase() + groupBy.slice(1)}</h3>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>${groupBy.charAt(0).toUpperCase() + groupBy.slice(1)}</th>
-                                <th>Crates</th>
-                                <th>Punnets</th>
-                                <th>Kg</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${Object.entries(grouped).map(([key, data]) => `
-                                <tr>
-                                    <td>${key}</td>
-                                    <td>${data.crates}</td>
-                                    <td>${data.punnets}</td>
-                                    <td>${data.kg.toFixed(1)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
-        
-        function displayAggregatedRecords(records) {
-            // Aggregate records by picker and batch
-            const aggregated = {};
+            let html = '<div class="table-container"><table><thead><tr>';
+            html += `<th>${groupBy.charAt(0).toUpperCase() + groupBy.slice(1)}</th>`;
+            html += '<th>Records</th>';
+            html += '<th>Crates</th>';
+            html += '<th>Punnets</th>';
+            html += '<th>Weight (kg)</th>';
+            html += '</tr></thead><tbody>';
             
-            records.forEach(record => {
-                const key = `${record.picker_id}_${record.batch_id}_${record.variety}_${record.block}_${record.size}`;
-                if (!aggregated[key]) {
-                    aggregated[key] = {
-                        picker: record.picker_id,
-                        batch: record.batch_id,
-                        variety: record.variety,
-                        block: record.block,
-                        size: record.size,
-                        crates: 0,
-                        partialPunnets: 0,
-                        totalPunnets: 0,
-                        totalKg: 0,
-                        date: record.timestamp
-                    };
-                }
-                aggregated[key].crates++;
-                if (record.is_partial) {
-                    aggregated[key].partialPunnets += record.manual_punnets || 0;
-                }
-                aggregated[key].totalPunnets += record.punnets_total;
-                aggregated[key].totalKg += record.kg;
+            Object.entries(groups).forEach(([key, groupRecords]) => {
+                const crates = groupRecords.reduce((sum, r) => sum + (r.crate_count || 1), 0);
+                const punnets = groupRecords.reduce((sum, r) => sum + (r.total_punnets || 0), 0);
+                const kg = groupRecords.reduce((sum, r) => sum + (r.total_weight_kg || 0), 0);
+                
+                html += '<tr>';
+                html += `<td><strong>${key}</strong></td>`;
+                html += `<td>${groupRecords.length}</td>`;
+                html += `<td>${crates}</td>`;
+                html += `<td>${punnets}</td>`;
+                html += `<td>${kg.toFixed(2)}</td>`;
+                html += '</tr>';
             });
             
-            // Convert to array and sort by date
-            const aggregatedArray = Object.entries(aggregated).map(([key, data]) => ({
-                key: key,
-                ...data
-            }));
-            
-            aggregatedArray.sort((a, b) => new Date(b.date) - new Date(a.date));
-            
-            const container = document.getElementById('recordsTableContainer');
-            
-            if (aggregatedArray.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No records found</p>';
-                return;
-            }
-            
-            container.innerHTML = `
-                <h3>All Records (Aggregated by Picker & Batch)</h3>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Picker</th>
-                                <th>Variety</th>
-                                <th>Block</th>
-                                <th>Size</th>
-                                <th>Crates</th>
-                                <th>Partial Punnets</th>
-                                <th>Total Kg</th>
-                                <th>Batch</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${aggregatedArray.map((record, index) => `
-                                <tr>
-                                    <td>${new Date(record.date).toLocaleDateString()}</td>
-                                    <td>${record.picker}</td>
-                                    <td>${record.variety}</td>
-                                    <td>${record.block}</td>
-                                    <td>${record.size}</td>
-                                    <td>${record.crates}</td>
-                                    <td>${record.partialPunnets || '-'}</td>
-                                    <td>${record.totalKg.toFixed(1)}</td>
-                                    <td>${record.batch}</td>
-                                    <td>
-                                        <button class="btn action-btn" onclick="editAggregatedRecord('${record.key}')">✏️</button>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
-        
-        function editAggregatedRecord(recordKey) {
-            // Find all records matching this key
-            const records = getFromStorage('harvestRecords', []);
-            const [picker, batch, variety, block, size] = recordKey.split('_');
-            
-            const matchingRecords = records.filter(r => 
-                r.picker_id === picker && 
-                r.batch_id === parseInt(batch) && 
-                r.variety === variety && 
-                r.block === block && 
-                r.size === size
-            );
-            
-            if (matchingRecords.length === 0) return;
-            
-            // Calculate totals
-            let totalCrates = matchingRecords.length;
-            let partialPunnets = matchingRecords
-                .filter(r => r.is_partial)
-                .reduce((sum, r) => sum + (r.manual_punnets || 0), 0);
-            
-            // Populate edit modal
-            const employees = getFromStorage('employees', []);
-            const varieties = getFromStorage('varieties', []);
-            const blocks = getFromStorage('blocks', []);
-            
-            document.getElementById('editRecordIndex').value = recordKey;
-            
-            const editPicker = document.getElementById('editPicker');
-            editPicker.innerHTML = '<option value="">Manual Entry</option>' + 
-                employees.map(emp => `<option value="${emp.name}" ${emp.name === picker ? 'selected' : ''}>${emp.name}</option>`).join('');
-            if (!employees.find(emp => emp.name === picker)) {
-                editPicker.value = '';
-                editPicker.insertAdjacentHTML('afterbegin', `<option value="${picker}" selected>${picker}</option>`);
-            }
-            
-            const editVariety = document.getElementById('editVariety');
-            editVariety.innerHTML = varieties.map(v => `<option value="${v}" ${v === variety ? 'selected' : ''}>${v}</option>`).join('');
-            
-            const editBlock = document.getElementById('editBlock');
-            editBlock.innerHTML = blocks.map(b => `<option value="${b}" ${b === block ? 'selected' : ''}>${b}</option>`).join('');
-            
-            document.getElementById('editSize').value = size;
-            document.getElementById('editCrates').value = totalCrates;
-            document.getElementById('editPartialPunnets').value = partialPunnets || '';
-            
-            document.getElementById('editRecordModal').classList.add('active');
-        }
-        
-        function saveEditedRecord() {
-            const recordKey = document.getElementById('editRecordIndex').value;
-            const [oldPicker, oldBatch, oldVariety, oldBlock, oldSize] = recordKey.split('_');
-            
-            const newPicker = document.getElementById('editPicker').value;
-            const newVariety = document.getElementById('editVariety').value;
-            const newBlock = document.getElementById('editBlock').value;
-            const newSize = document.getElementById('editSize').value;
-            const newCrates = parseInt(document.getElementById('editCrates').value);
-            const newPartialPunnets = parseInt(document.getElementById('editPartialPunnets').value) || 0;
-            
-            if (confirm('Are you happy with changes?')) {
-                const records = getFromStorage('harvestRecords', []);
-                
-                // Find and update matching records
-                const matchingIndices = [];
-                records.forEach((r, index) => {
-                    if (r.picker_id === oldPicker && 
-                        r.batch_id === parseInt(oldBatch) && 
-                        r.variety === oldVariety && 
-                        r.block === oldBlock && 
-                        r.size === oldSize) {
-                        matchingIndices.push(index);
-                    }
-                });
-                
-                // Remove old records
-                for (let i = matchingIndices.length - 1; i >= 0; i--) {
-                    records.splice(matchingIndices[i], 1);
-                }
-                
-                // Add new records
-                const punnetSettings = getFromStorage('punnetSettings', {});
-                const sizeSettings = punnetSettings[newSize];
-                
-                for (let i = 0; i < newCrates; i++) {
-                    const isPartial = (i === newCrates - 1) && newPartialPunnets > 0;
-                    const punnets = isPartial ? newPartialPunnets : sizeSettings.punnetsPerCrate;
-                    const kg = (punnets * sizeSettings.punnetWeightG) / 1000;
-                    
-                    records.push({
-                        timestamp: new Date().toISOString(),
-                        picker_id: newPicker,
-                        crate_id: `edited_${Date.now()}_${i}`,
-                        variety: newVariety,
-                        block: newBlock,
-                        size: newSize,
-                        punnets_per_crate: sizeSettings.punnetsPerCrate,
-                        crate_qty: 1,
-                        is_partial: isPartial,
-                        manual_punnets: isPartial ? newPartialPunnets : null,
-                        punnets_total: punnets,
-                        punnet_weight_g: sizeSettings.punnetWeightG,
-                        kg: kg,
-                        batch_id: parseInt(oldBatch),
-                        scan_raw: `edited_${Date.now()}`
-                    });
-                }
-                
-                saveToStorage('harvestRecords', records);
-                closeEditRecordModal();
-                loadRecordsScreen();
-                showToast('Record updated successfully');
-            }
-        }
-        
-        function deleteEditedRecord() {
-            if (confirm('Are you happy with changes? This will delete the record.')) {
-                const recordKey = document.getElementById('editRecordIndex').value;
-                const [picker, batch, variety, block, size] = recordKey.split('_');
-                
-                let records = getFromStorage('harvestRecords', []);
-                records = records.filter(r => !(
-                    r.picker_id === picker && 
-                    r.batch_id === parseInt(batch) && 
-                    r.variety === variety && 
-                    r.block === block && 
-                    r.size === size
-                ));
-                
-                saveToStorage('harvestRecords', records);
-                closeEditRecordModal();
-                loadRecordsScreen();
-                showToast('Record deleted');
-            }
-        }
-        
-        function closeEditRecordModal() {
-            document.getElementById('editRecordModal').classList.remove('active');
-        }
-        
-        function addManualRecord() {
-            const employees = getFromStorage('employees', []);
-            const varieties = getFromStorage('varieties', []);
-            const blocks = getFromStorage('blocks', []);
-            
-            document.getElementById('manualDate').valueAsDate = new Date();
-            
-            const pickerSelect = document.getElementById('manualPicker');
-            pickerSelect.innerHTML = '<option value="">Select or enter manually</option>' + 
-                employees.map(emp => `<option value="${emp.name}">${emp.name}</option>`).join('');
-            
-            const varietySelect = document.getElementById('manualVariety');
-            varietySelect.innerHTML = '<option value="">Select Variety</option>' + 
-                varieties.map(v => `<option value="${v}">${v}</option>`).join('');
-            
-            const blockSelect = document.getElementById('manualBlock');
-            blockSelect.innerHTML = '<option value="">Select Block</option>' + 
-                blocks.map(b => `<option value="${b}">${b}</option>`).join('');
-            
-            document.getElementById('manualSize').value = '';
-            document.getElementById('manualCrates').value = '';
-            document.getElementById('manualPartialPunnets').value = '';
-            
-            document.getElementById('manualRecordModal').classList.add('active');
-        }
-        
-        function saveManualRecord() {
-            const date = document.getElementById('manualDate').value;
-            const picker = document.getElementById('manualPicker').value;
-            const variety = document.getElementById('manualVariety').value;
-            const block = document.getElementById('manualBlock').value;
-            const size = document.getElementById('manualSize').value;
-            const crates = parseInt(document.getElementById('manualCrates').value);
-            const partialPunnets = parseInt(document.getElementById('manualPartialPunnets').value) || 0;
-            
-            if (!date || !picker || !variety || !block || !size || !crates) {
-                showToast('Please fill in all required fields');
-                return;
-            }
-            
-            const punnetSettings = getFromStorage('punnetSettings', {});
-            const sizeSettings = punnetSettings[size];
-            
-            if (!sizeSettings) {
-                showToast('Invalid size settings');
-                return;
-            }
-            
-            const records = getFromStorage('harvestRecords', []);
-            const batchId = getFromStorage('currentBatchId', 1);
-            
-            // Add records for each crate
-            for (let i = 0; i < crates; i++) {
-                const isPartial = (i === crates - 1) && partialPunnets > 0;
-                const punnets = isPartial ? partialPunnets : sizeSettings.punnetsPerCrate;
-                const kg = (punnets * sizeSettings.punnetWeightG) / 1000;
-                
-                records.push({
-                    timestamp: new Date(date).toISOString(),
-                    picker_id: picker,
-                    crate_id: `manual_${Date.now()}_${i}`,
-                    variety: variety,
-                    block: block,
-                    size: size,
-                    punnets_per_crate: sizeSettings.punnetsPerCrate,
-                    crate_qty: 1,
-                    is_partial: isPartial,
-                    manual_punnets: isPartial ? partialPunnets : null,
-                    punnets_total: punnets,
-                    punnet_weight_g: sizeSettings.punnetWeightG,
-                    kg: kg,
-                    batch_id: batchId,
-                    scan_raw: `manual_${Date.now()}`
-                });
-            }
-            
-            saveToStorage('harvestRecords', records);
-            closeManualRecordModal();
-            loadRecordsScreen();
-            showToast('Manual record added successfully');
-        }
-        
-        function closeManualRecordModal() {
-            document.getElementById('manualRecordModal').classList.remove('active');
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
         }
         
         function exportCSV() {
             const records = getFromStorage('harvestRecords', []);
-            const timeFilter = document.getElementById('filterTime').value;
-            const varietyFilter = document.getElementById('filterVariety').value;
-            const blockFilter = document.getElementById('filterBlock').value;
             
-            // Apply same filters as display
-            let filtered = records.filter(record => {
-                const recordDate = new Date(record.timestamp);
-                const today = new Date();
-                
-                let timeMatch = true;
-                switch(timeFilter) {
-                    case 'today':
-                        timeMatch = recordDate.toDateString() === today.toDateString();
-                        break;
-                    case 'week':
-                        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-                        timeMatch = recordDate >= weekAgo;
-                        break;
-                    case 'month':
-                        timeMatch = recordDate.getMonth() === today.getMonth() && 
-                                   recordDate.getFullYear() === today.getFullYear();
-                        break;
-                }
-                
-                const varietyMatch = varietyFilter === 'all' || record.variety === varietyFilter;
-                const blockMatch = blockFilter === 'all' || record.block === blockFilter;
-                
-                return timeMatch && varietyMatch && blockMatch;
-            });
-            
-            if (filtered.length === 0) {
+            if (records.length === 0) {
                 showToast('No records to export');
                 return;
             }
             
-            // Create CSV content
-            const headers = 'timestamp,picker_id,crate_id,variety,block,size,punnets_per_crate,crate_qty,is_partial,manual_punnets,punnets_total,punnet_weight_g,kg,batch_id,scan_raw';
-            const rows = filtered.map(r => 
-                `${r.timestamp},${r.picker_id},${r.crate_id},${r.variety},${r.block},${r.size},${r.punnets_per_crate},${r.crate_qty},${r.is_partial},${r.manual_punnets || ''},${r.punnets_total},${r.punnet_weight_g},${r.kg},${r.batch_id},"${r.scan_raw}"`
-            );
+            const filtered = filterRecords(records);
             
-            const csv = headers + '\n' + rows.join('\n');
+            if (filtered.length === 0) {
+                showToast('No records match current filters');
+                return;
+            }
             
-            // Download file
+            let csv = 'Date,Time,Batch,Picker,Crate ID,Variety,Block,Size,Punnets,Weight (kg),Is Partial\n';
+            
+            filtered.forEach(record => {
+                const date = new Date(record.timestamp);
+                const dateStr = date.toLocaleDateString();
+                const timeStr = date.toLocaleTimeString();
+                
+                csv += `"${dateStr}","${timeStr}",${record.batch_id},"${record.picker_id}","${record.crate_id}","${record.variety}","${record.block}","${record.size}",${record.total_punnets},${record.total_weight_kg.toFixed(2)},${record.is_partial}\n`;
+            });
+            
             const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
+            const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `harvest_${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `harvest_records_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
-            URL.revokeObjectURL(url);
+            window.URL.revokeObjectURL(url);
             
-            showToast(`Exported ${filtered.length} records`);
+            showToast('CSV exported!');
         }
         
         function clearAllRecords() {
-            if (confirm('Are you sure you want to delete ALL harvest records? This cannot be undone.')) {
-                saveToStorage('harvestRecords', []);
-                saveToStorage('currentBatchId', 1);
-                currentBatchCrates = 0;
-                loadRecordsScreen();
-                showToast('All records cleared');
+            if (!confirm('Are you sure you want to delete ALL records? This cannot be undone!')) {
+                return;
             }
+            
+            if (!confirm('Really delete everything? This is your last chance!')) {
+                return;
+            }
+            
+            saveToStorage('harvestRecords', []);
+            saveToStorage('currentBatchId', 1);
+            showToast('All records cleared');
+            updateRecordsDisplay();
         }
         
         // ============= SETTINGS SCREENS =============
-        function loadPickingSettingsScreen() {
-            const punnetSettings = getFromStorage('punnetSettings', {});
+        function loadPickingSettings() {
+            const settings = getFromStorage('punnetSettings', {});
             const varieties = getFromStorage('varieties', []);
             const blocks = getFromStorage('blocks', []);
             
-            // Load punnet settings
-            document.getElementById('smallPunnets').value = punnetSettings.Small?.punnetsPerCrate || 32;
-            document.getElementById('smallWeight').value = punnetSettings.Small?.punnetWeightG || 250;
-            document.getElementById('mediumPunnets').value = punnetSettings.Medium?.punnetsPerCrate || 20;
-            document.getElementById('mediumWeight').value = punnetSettings.Medium?.punnetWeightG || 400;
-            document.getElementById('largePunnets').value = punnetSettings.Large?.punnetsPerCrate || 8;
-            document.getElementById('largeWeight').value = punnetSettings.Large?.punnetWeightG || 800;
+            if (settings['Small']) {
+                document.getElementById('smallPunnets').value = settings['Small'].punnetsPerCrate;
+                document.getElementById('smallWeight').value = settings['Small'].punnetWeightG;
+            }
+            if (settings['Medium']) {
+                document.getElementById('mediumPunnets').value = settings['Medium'].punnetsPerCrate;
+                document.getElementById('mediumWeight').value = settings['Medium'].punnetWeightG;
+            }
+            if (settings['Large']) {
+                document.getElementById('largePunnets').value = settings['Large'].punnetsPerCrate;
+                document.getElementById('largeWeight').value = settings['Large'].punnetWeightG;
+            }
             
-            // Load master lists
             document.getElementById('varietiesList').value = varieties.join('\n');
             document.getElementById('blocksList').value = blocks.join('\n');
         }
         
-        function savePickingSettings() {
-            // Save punnet settings
+        function saveSettings() {
             const punnetSettings = {
                 'Small': {
-                    punnetsPerCrate: parseInt(document.getElementById('smallPunnets').value) || 32,
-                    punnetWeightG: parseInt(document.getElementById('smallWeight').value) || 250
+                    punnetsPerCrate: parseInt(document.getElementById('smallPunnets').value),
+                    punnetWeightG: parseInt(document.getElementById('smallWeight').value)
                 },
                 'Medium': {
-                    punnetsPerCrate: parseInt(document.getElementById('mediumPunnets').value) || 20,
-                    punnetWeightG: parseInt(document.getElementById('mediumWeight').value) || 400
+                    punnetsPerCrate: parseInt(document.getElementById('mediumPunnets').value),
+                    punnetWeightG: parseInt(document.getElementById('mediumWeight').value)
                 },
                 'Large': {
-                    punnetsPerCrate: parseInt(document.getElementById('largePunnets').value) || 8,
-                    punnetWeightG: parseInt(document.getElementById('largeWeight').value) || 800
+                    punnetsPerCrate: parseInt(document.getElementById('largePunnets').value),
+                    punnetWeightG: parseInt(document.getElementById('largeWeight').value)
                 }
             };
             saveToStorage('punnetSettings', punnetSettings);
             
-            // Save master lists
             const varieties = normalizeList(document.getElementById('varietiesList').value);
             const blocks = normalizeList(document.getElementById('blocksList').value);
             
             saveToStorage('varieties', varieties);
             saveToStorage('blocks', blocks);
             
-            showToast('Picking settings saved successfully!');
+            showToast('Settings saved!');
         }
         
-        function loadDataSettingsScreen() {
-            const blocks = getFromStorage('blocks', []);
-            const plantsPerBlock = getFromStorage('plantsPerBlock', {});
-            
-            const container = document.getElementById('plantsPerBlockContainer');
-            container.innerHTML = blocks.map(block => `
-                <div class="form-group">
-                    <label for="plants_${block.replace(/\s/g, '_')}">${block}</label>
-                    <input type="number" 
-                           id="plants_${block.replace(/\s/g, '_')}" 
-                           value="${plantsPerBlock[block] || ''}" 
-                           placeholder="Number of plants"
-                           min="0">
-                </div>
-            `).join('');
+        function loadDataSettings() {
+            const plantsPerBlock = getFromStorage('plantsPerBlock', 1000);
+            document.getElementById('plantsPerBlock').value = plantsPerBlock;
         }
         
-        function savePlantsPerBlock() {
-            const blocks = getFromStorage('blocks', []);
-            const plantsPerBlock = {};
-            
-            blocks.forEach(block => {
-                const inputId = `plants_${block.replace(/\s/g, '_')}`;
-                const value = parseInt(document.getElementById(inputId).value);
-                if (value && value > 0) {
-                    plantsPerBlock[block] = value;
-                }
-            });
-            
+        function saveDataSettings() {
+            const plantsPerBlock = parseInt(document.getElementById('plantsPerBlock').value) || 1000;
             saveToStorage('plantsPerBlock', plantsPerBlock);
-            showToast('Plants per block saved successfully!');
+            showToast('Data settings saved!');
         }
         
-        // ============= EVENT WIRING =============
-        // Partial crate checkbox handler
-        document.getElementById('partialCrate').addEventListener('change', function(e) {
-            const manualInput = document.getElementById('manualPunnets');
-            if (e.target.checked) {
-                manualInput.style.display = 'block';
-                document.getElementById('manualPunnetsInput').required = true;
-            } else {
-                manualInput.style.display = 'none';
-                document.getElementById('manualPunnetsInput').required = false;
-                document.getElementById('manualPunnetsInput').value = '';
-            }
-        });
-        
-        // Scanner partial crate checkbox handler
-        document.getElementById('scannerPartialCrate').addEventListener('change', function(e) {
-            const manualInput = document.getElementById('scannerManualPunnets');
-            if (e.target.checked) {
-                manualInput.style.display = 'block';
-            } else {
-                manualInput.style.display = 'none';
-                manualInput.value = '';
-            }
-        });
-        
-        // Filter change handlers
-        document.getElementById('filterTime').addEventListener('change', applyFilters);
-        document.getElementById('filterVariety').addEventListener('change', applyFilters);
-        document.getElementById('filterBlock').addEventListener('change', applyFilters);
-        document.getElementById('filterGroupBy').addEventListener('change', applyFilters);
-        
-        // Page visibility handler to stop camera when page is hidden
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden && currentStream) {
-                closeScanner();
-            }
-        });
-        
-        // Initialize app on load
-        window.addEventListener('DOMContentLoaded', function() {
+        // ============= INITIALIZATION =============
+        window.addEventListener('load', () => {
             initializeStorage();
-            loadStrawberryScreen();
         });
     </script>
-    
-    <!-- ============= PATCH AREA START ============= -->
-    <script id="hotfixes">
-        // Reserved for hot fixes if needed
-    </script>
-    <!-- ============= PATCH AREA END ============= -->
 </body>
 </html>
