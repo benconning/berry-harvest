@@ -688,7 +688,7 @@
         
         <div class="form-group">
             <label for="manualPicker">Picker *</label>
-            <input type="text" id="manualPicker" placeholder="Enter picker ID" required>
+            <select id="manualPicker" required></select>
         </div>
         
         <div class="form-group">
@@ -712,7 +712,7 @@
         </div>
         
         <div class="form-group">
-            <label for="manualCrates">Number of Crates *</label>
+            <label for="manualCrates">Number of Full Crates *</label>
             <input type="number" id="manualCrates" min="0" value="0" required>
         </div>
         
@@ -1266,9 +1266,20 @@ Block C</textarea>
         function loadManualEntryScreen() {
             const varieties = getFromStorage('varieties', []);
             const blocks = getFromStorage('blocks', []);
+            const employees = getFromStorage('employees', []);
             
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('manualDate').value = today;
+            
+            // Populate picker dropdown with enrolled employees
+            const pickerSelect = document.getElementById('manualPicker');
+            pickerSelect.innerHTML = '<option value="">Select Picker</option>';
+            employees.forEach(emp => {
+                const option = document.createElement('option');
+                option.value = emp.id;
+                option.textContent = `${emp.name} (${emp.id})`;
+                pickerSelect.appendChild(option);
+            });
             
             const varietySelect = document.getElementById('manualVariety');
             varietySelect.innerHTML = '<option value="">Select Variety</option>';
@@ -1291,7 +1302,7 @@ Block C</textarea>
         
         function saveManualEntry() {
             const date = document.getElementById('manualDate').value;
-            const picker = document.getElementById('manualPicker').value.trim();
+            const picker = document.getElementById('manualPicker').value;
             const variety = document.getElementById('manualVariety').value;
             const block = document.getElementById('manualBlock').value;
             const size = document.getElementById('manualSize').value;
@@ -1345,10 +1356,12 @@ Block C</textarea>
             
             showToast(`Manual entry saved! ${crates} crates + ${partialPunnets} punnets`);
             
+            // Reset form
             document.getElementById('manualPicker').value = '';
             document.getElementById('manualCrates').value = '0';
             document.getElementById('manualPartialPunnets').value = '';
             
+            // Navigate to records
             navigateToScreen('recordsScreen');
         }
         
@@ -1472,7 +1485,10 @@ Block C</textarea>
             
             showToast(`Captured! Picker: ${record.picker_id}, Crate: ${record.crate_id}`);
             
-            resumeScanning();
+            // Automatically resume scanning for next crate
+            setTimeout(() => {
+                resumeScanning();
+            }, 500);
         }
         
         function resumeScanning() {
@@ -1566,11 +1582,42 @@ Block C</textarea>
         
         function completeBatch() {
             const currentBatch = getFromStorage('currentBatchId', 1);
-            saveToStorage('currentBatchId', currentBatch + 1);
+            const records = getFromStorage('harvestRecords', []);
             
-            closeScanner();
-            showToast(`Batch #${currentBatch} complete! ${currentBatchCrates} crates scanned`);
-            navigateToScreen('recordsScreen');
+            // Get records from current batch
+            const batchRecords = records.filter(r => r.batch_id === currentBatch);
+            
+            if (batchRecords.length === 0) {
+                showToast('No crates scanned in this batch');
+                closeScanner();
+                return;
+            }
+            
+            // Count crates per picker
+            const pickerCounts = {};
+            batchRecords.forEach(record => {
+                const picker = record.picker_id;
+                if (!pickerCounts[picker]) {
+                    pickerCounts[picker] = 0;
+                }
+                pickerCounts[picker] += (record.crate_count || 1);
+            });
+            
+            // Create summary message
+            let summary = `Batch #${currentBatch} Summary:\n\n`;
+            Object.entries(pickerCounts).forEach(([picker, count]) => {
+                summary += `${picker}: ${count} crates\n`;
+            });
+            summary += `\nTotal: ${batchRecords.length} crates\n\nConfirm to save to records?`;
+            
+            if (confirm(summary)) {
+                // Increment batch ID for next batch
+                saveToStorage('currentBatchId', currentBatch + 1);
+                
+                closeScanner();
+                showToast(`Batch #${currentBatch} complete! ${batchRecords.length} crates scanned`);
+                navigateToScreen('recordsScreen');
+            }
         }
         
         function closeScanner() {
@@ -2086,28 +2133,55 @@ Block C</textarea>
                 return;
             }
             
+            // Aggregate records by batch, picker, variety, block, and size
+            const aggregated = {};
+            records.forEach(record => {
+                const key = `${record.batch_id}-${record.picker_id}-${record.variety}-${record.block}-${record.size}`;
+                
+                if (!aggregated[key]) {
+                    aggregated[key] = {
+                        batch_id: record.batch_id,
+                        picker_id: record.picker_id,
+                        variety: record.variety,
+                        block: record.block,
+                        size: record.size,
+                        timestamp: record.timestamp,
+                        crate_count: 0,
+                        total_punnets: 0,
+                        total_weight_kg: 0
+                    };
+                }
+                
+                aggregated[key].crate_count += (record.crate_count || 1);
+                aggregated[key].total_punnets += record.total_punnets;
+                aggregated[key].total_weight_kg += record.total_weight_kg;
+            });
+            
+            // Convert to array and sort by batch ID (descending)
+            const aggregatedArray = Object.values(aggregated).sort((a, b) => b.batch_id - a.batch_id);
+            
             let html = '<div class="table-container"><table><thead><tr>';
-            html += '<th>Date/Time</th>';
             html += '<th>Batch</th>';
+            html += '<th>Date/Time</th>';
             html += '<th>Picker</th>';
-            html += '<th>Crate ID</th>';
             html += '<th>Variety</th>';
             html += '<th>Block</th>';
             html += '<th>Size</th>';
+            html += '<th>Crates</th>';
             html += '<th>Punnets</th>';
             html += '<th>Weight (kg)</th>';
             html += '</tr></thead><tbody>';
             
-            records.forEach(record => {
+            aggregatedArray.forEach(record => {
                 html += '<tr>';
+                html += `<td>#${record.batch_id}</td>`;
                 html += `<td>${formatDate(record.timestamp)}</td>`;
-                html += `<td>${record.batch_id}</td>`;
                 html += `<td>${record.picker_id}</td>`;
-                html += `<td>${record.crate_id}</td>`;
                 html += `<td>${record.variety}</td>`;
                 html += `<td>${record.block}</td>`;
                 html += `<td>${record.size}</td>`;
-                html += `<td>${record.total_punnets}${record.is_partial ? ' (partial)' : ''}</td>`;
+                html += `<td>${record.crate_count}</td>`;
+                html += `<td>${record.total_punnets}</td>`;
                 html += `<td>${record.total_weight_kg.toFixed(2)}</td>`;
                 html += '</tr>';
             });
