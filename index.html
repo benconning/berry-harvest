@@ -2430,8 +2430,10 @@ Block C</textarea>
                 return;
             }
             
-            const recordIds = recordIdsString.split(',');
-            deleteRecordFromFirestore(recordIds).then(success => {
+            console.log('🗑️ deleteRecord called with:', recordIdsString, typeof recordIdsString);
+            
+            // Pass the string directly to deleteRecordFromFirestore
+            deleteRecordFromFirestore(recordIdsString).then(success => {
                 if (success) {
                     updateRecordsDisplay();
                 }
