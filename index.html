@@ -1048,6 +1048,37 @@ Block C</textarea>
     <!-- Load QRCode.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC75cfwGxrJfhw-aTw7myMZCnytPVtZQ54",
+            authDomain: "berry-app-ee0b7.firebaseapp.com",
+            projectId: "berry-app-ee0b7",
+            storageBucket: "berry-app-ee0b7.firebasestorage.app",
+            messagingSenderId: "505917943189",
+            appId: "1:505917943189:web:d9effddff5eab7e59855a9c",
+            measurementId: "G-CCHMFH4N3F"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        // Enable offline persistence
+        db.enablePersistence()
+            .catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    console.log('Persistence failed: Multiple tabs open');
+                } else if (err.code == 'unimplemented') {
+                    console.log('Persistence not available');
+                }
+            });
+    </script>
+    
     <script>
         // ============= NAVIGATION STACK =============
         let navigationStack = [];
@@ -1157,56 +1188,209 @@ Block C</textarea>
             return normalized;
         }
         
-        // ============= STORAGE HELPERS =============
+        // ============= FIREBASE STORAGE HELPERS =============
+        
+        // Sync status indicator
+        let isSyncing = false;
+        
+        function showSyncStatus(message) {
+            // You can add a visual indicator here if desired
+            console.log('Sync:', message);
+        }
+        
+        // Get data from Firestore with real-time listener
         function getFromStorage(key, defaultValue) {
-            try {
-                const value = localStorage.getItem(key);
-                return value ? JSON.parse(value) : defaultValue;
-            } catch (e) {
-                console.error('Storage read error:', e);
-                return defaultValue;
+            // For settings that don't need real-time sync, use localStorage
+            const localOnlyKeys = ['scanContext'];
+            if (localOnlyKeys.includes(key)) {
+                try {
+                    const value = localStorage.getItem(key);
+                    return value ? JSON.parse(value) : defaultValue;
+                } catch (e) {
+                    return defaultValue;
+                }
             }
+            
+            // For now, return from cache (will be set up by listeners)
+            const cached = window.firebaseCache?.[key];
+            return cached !== undefined ? cached : defaultValue;
         }
         
         function saveToStorage(key, value) {
-            try {
-                localStorage.setItem(key, JSON.stringify(value));
-                return true;
-            } catch (e) {
-                console.error('Storage write error:', e);
-                showToast('Storage error - data may not persist');
-                return false;
+            // For settings that don't need real-time sync, use localStorage
+            const localOnlyKeys = ['scanContext'];
+            if (localOnlyKeys.includes(key)) {
+                try {
+                    localStorage.setItem(key, JSON.stringify(value));
+                    return true;
+                } catch (e) {
+                    console.error('Storage write error:', e);
+                    return false;
+                }
             }
+            
+            // Save to Firestore
+            isSyncing = true;
+            showSyncStatus('Saving...');
+            
+            return db.collection('settings').doc(key).set({
+                data: value,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                isSyncing = false;
+                showSyncStatus('Saved');
+                return true;
+            })
+            .catch((error) => {
+                console.error('Firestore write error:', error);
+                showToast('Sync error - please check connection');
+                isSyncing = false;
+                return false;
+            });
         }
         
-        function initializeStorage() {
-            if (!localStorage.getItem('punnetSettings')) {
-                saveToStorage('punnetSettings', {
-                    'Small': { punnetsPerCrate: 32, punnetWeightG: 250 },
-                    'Medium': { punnetsPerCrate: 20, punnetWeightG: 400 },
-                    'Large': { punnetsPerCrate: 8, punnetWeightG: 800 }
+        // Add a new record to Firestore
+        function addRecord(collection, record) {
+            return db.collection(collection).add({
+                ...record,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                showSyncStatus('Record synced');
+                return true;
+            })
+            .catch((error) => {
+                console.error('Error adding record:', error);
+                showToast('Failed to sync record');
+                return false;
+            });
+        }
+        
+        // Delete record from Firestore
+        function deleteRecordFromFirestore(recordIds) {
+            const batch = db.batch();
+            
+            recordIds.forEach(id => {
+                const ref = db.collection('harvestRecords').doc(String(id));
+                batch.delete(ref);
+            });
+            
+            return batch.commit()
+                .then(() => {
+                    showToast('Record deleted');
+                    return true;
+                })
+                .catch((error) => {
+                    console.error('Error deleting:', error);
+                    showToast('Failed to delete record');
+                    return false;
                 });
-            }
-            if (!localStorage.getItem('varieties')) {
-                saveToStorage('varieties', ['Albion', 'Camarosa', 'Ventana']);
-            }
-            if (!localStorage.getItem('blocks')) {
-                saveToStorage('blocks', ['Block A', 'Block B', 'Block C']);
-            }
-            if (!localStorage.getItem('harvestRecords')) {
-                saveToStorage('harvestRecords', []);
-            }
-            if (!localStorage.getItem('currentBatchId')) {
-                saveToStorage('currentBatchId', 1);
-            }
-            if (!localStorage.getItem('employees')) {
-                saveToStorage('employees', []);
-            }
-            if (!localStorage.getItem('timeRecords')) {
-                saveToStorage('timeRecords', []);
-            }
-            if (!localStorage.getItem('plantsPerBlock')) {
-                saveToStorage('plantsPerBlock', 1000);
+        }
+        
+        // Initialize Firebase cache and listeners
+        window.firebaseCache = {};
+        
+        function initializeStorage() {
+            // Set up real-time listeners for each collection/document
+            
+            // Listen to settings
+            const settingsKeys = [
+                'punnetSettings',
+                'varieties', 
+                'blocks',
+                'currentBatchId',
+                'employees',
+                'plantsPerBlock'
+            ];
+            
+            settingsKeys.forEach(key => {
+                db.collection('settings').doc(key).onSnapshot((doc) => {
+                    if (doc.exists) {
+                        window.firebaseCache[key] = doc.data().data;
+                    } else {
+                        // Initialize with defaults
+                        let defaultValue;
+                        switch(key) {
+                            case 'punnetSettings':
+                                defaultValue = {
+                                    'Small': { punnetsPerCrate: 32, punnetWeightG: 250 },
+                                    'Medium': { punnetsPerCrate: 20, punnetWeightG: 400 },
+                                    'Large': { punnetsPerCrate: 8, punnetWeightG: 800 }
+                                };
+                                break;
+                            case 'varieties':
+                                defaultValue = ['Albion', 'Camarosa', 'Ventana'];
+                                break;
+                            case 'blocks':
+                                defaultValue = ['Block A', 'Block B', 'Block C'];
+                                break;
+                            case 'currentBatchId':
+                                defaultValue = 1;
+                                break;
+                            case 'employees':
+                                defaultValue = [];
+                                break;
+                            case 'plantsPerBlock':
+                                defaultValue = 1000;
+                                break;
+                            default:
+                                defaultValue = null;
+                        }
+                        
+                        if (defaultValue !== null) {
+                            window.firebaseCache[key] = defaultValue;
+                            saveToStorage(key, defaultValue);
+                        }
+                    }
+                }, (error) => {
+                    console.error('Listener error:', error);
+                });
+            });
+            
+            // Listen to harvest records
+            db.collection('harvestRecords').onSnapshot((snapshot) => {
+                const records = [];
+                snapshot.forEach((doc) => {
+                    records.push({
+                        firestoreId: doc.id,
+                        ...doc.data()
+                    });
+                });
+                window.firebaseCache['harvestRecords'] = records;
+                
+                // Update display if on records screen
+                const recordsScreen = document.getElementById('recordsScreen');
+                if (recordsScreen && recordsScreen.classList.contains('active')) {
+                    updateRecordsDisplay();
+                }
+            }, (error) => {
+                console.error('Records listener error:', error);
+            });
+            
+            // Listen to time records
+            db.collection('timeRecords').onSnapshot((snapshot) => {
+                const records = [];
+                snapshot.forEach((doc) => {
+                    records.push({
+                        firestoreId: doc.id,
+                        ...doc.data()
+                    });
+                });
+                window.firebaseCache['timeRecords'] = records;
+                
+                // Update display if on time records screen
+                const timeScreen = document.getElementById('timeRecordsScreen');
+                if (timeScreen && timeScreen.classList.contains('active')) {
+                    loadTimeRecords();
+                }
+            }, (error) => {
+                console.error('Time records listener error:', error);
+            });
+            
+            // Initialize local-only settings
+            if (!localStorage.getItem('scanContext')) {
+                localStorage.setItem('scanContext', JSON.stringify({}));
             }
         }
         
@@ -1348,21 +1532,23 @@ Block C</textarea>
                 scan_raw: 'MANUAL_ENTRY'
             };
             
-            const records = getFromStorage('harvestRecords', []);
-            records.push(record);
-            saveToStorage('harvestRecords', records);
-            
-            saveToStorage('currentBatchId', batchId + 1);
-            
-            showToast(`Manual entry saved! ${crates} crates + ${partialPunnets} punnets`);
-            
-            // Reset form
-            document.getElementById('manualPicker').value = '';
-            document.getElementById('manualCrates').value = '0';
-            document.getElementById('manualPartialPunnets').value = '';
-            
-            // Navigate to records
-            navigateToScreen('recordsScreen');
+            // Save to Firebase
+            addRecord('harvestRecords', record).then(success => {
+                if (success) {
+                    // Increment batch ID
+                    saveToStorage('currentBatchId', batchId + 1);
+                    
+                    showToast(`Manual entry saved! ${crates} crates + ${partialPunnets} punnets`);
+                    
+                    // Reset form
+                    document.getElementById('manualPicker').value = '';
+                    document.getElementById('manualCrates').value = '0';
+                    document.getElementById('manualPartialPunnets').value = '';
+                    
+                    // Navigate to records
+                    navigateToScreen('recordsScreen');
+                }
+            });
         }
         
         // ============= SCANNER FUNCTIONALITY =============
@@ -1465,17 +1651,18 @@ Block C</textarea>
             const parsed = parseQRCode(detectedCode);
             const record = createHarvestRecord(parsed);
             
-            const records = getFromStorage('harvestRecords', []);
-            records.push(record);
-            saveToStorage('harvestRecords', records);
-            
-            currentBatchCrates++;
-            updateBatchPill();
-            
-            showToast(`Captured! Picker: ${record.picker_id}`);
-            
-            // Immediately resume scanning for next crate
-            resumeScanning();
+            // Save to Firebase
+            addRecord('harvestRecords', record).then(success => {
+                if (success) {
+                    currentBatchCrates++;
+                    updateBatchPill();
+                    
+                    showToast(`Captured! Picker: ${record.picker_id}`);
+                    
+                    // Immediately resume scanning for next crate
+                    resumeScanning();
+                }
+            });
         }
         
         function resumeScanning() {
@@ -1686,17 +1873,17 @@ Block C</textarea>
             
             const employees = getFromStorage('employees', []);
             employees.push(window.tempEmployee);
-            saveToStorage('employees', employees);
-            
-            showToast('Employee enrolled successfully!');
-            
-            // Reset form
-            document.getElementById('employeeName').value = '';
-            document.getElementById('employeePhone').value = '';
-            document.getElementById('employeeEmail').value = '';
-            document.getElementById('qrCodePreview').style.display = 'none';
-            document.getElementById('enrollBtn').style.display = 'none';
-            window.tempEmployee = null;
+            saveToStorage('employees', employees).then(() => {
+                showToast('Employee enrolled successfully!');
+                
+                // Reset form
+                document.getElementById('employeeName').value = '';
+                document.getElementById('employeePhone').value = '';
+                document.getElementById('employeeEmail').value = '';
+                document.getElementById('qrCodePreview').style.display = 'none';
+                document.getElementById('enrollBtn').style.display = 'none';
+                window.tempEmployee = null;
+            });
         }
         
         function loadClockInScreen() {
@@ -1880,13 +2067,14 @@ Block C</textarea>
                     photo: photoDataUrl
                 };
                 
-                const timeRecords = getFromStorage('timeRecords', []);
-                timeRecords.push(timeRecord);
-                saveToStorage('timeRecords', timeRecords);
-                
-                showToast(`${currentEmployeeForClock.name} clocked ${currentClockAction}!`);
-                closeClockCamera();
-                navigateToScreen('clockInOutMenuScreen');
+                // Save to Firebase
+                addRecord('timeRecords', timeRecord).then(success => {
+                    if (success) {
+                        showToast(`${currentEmployeeForClock.name} clocked ${currentClockAction}!`);
+                        closeClockCamera();
+                        navigateToScreen('clockInOutMenuScreen');
+                    }
+                });
             };
             reader.readAsDataURL(capturedPhotoBlob);
         }
@@ -2187,14 +2375,11 @@ Block C</textarea>
             }
             
             const recordIds = recordIdsString.split(',');
-            const records = getFromStorage('harvestRecords', []);
-            
-            // Filter out the records to delete
-            const updatedRecords = records.filter(r => !recordIds.includes(String(r.id)));
-            
-            saveToStorage('harvestRecords', updatedRecords);
-            showToast('Record deleted');
-            updateRecordsDisplay();
+            deleteRecordFromFirestore(recordIds).then(success => {
+                if (success) {
+                    updateRecordsDisplay();
+                }
+            });
         }
         
         function displayGroupedRecords(records, groupBy) {
@@ -2286,10 +2471,23 @@ Block C</textarea>
                 return;
             }
             
-            saveToStorage('harvestRecords', []);
-            saveToStorage('currentBatchId', 1);
-            showToast('All records cleared');
-            updateRecordsDisplay();
+            // Delete all harvest records from Firebase
+            db.collection('harvestRecords').get().then((snapshot) => {
+                const batch = db.batch();
+                snapshot.docs.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                return batch.commit();
+            }).then(() => {
+                // Reset batch ID
+                return saveToStorage('currentBatchId', 1);
+            }).then(() => {
+                showToast('All records cleared');
+                updateRecordsDisplay();
+            }).catch((error) => {
+                console.error('Error clearing records:', error);
+                showToast('Error clearing records');
+            });
         }
         
         // ============= SETTINGS SCREENS =============
