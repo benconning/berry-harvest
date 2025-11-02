@@ -1269,38 +1269,52 @@ Block C</textarea>
         
         // Delete record from Firestore
         function deleteRecordFromFirestore(recordIds) {
+            console.log('🗑️ Delete called with IDs:', recordIds);
+            
             // Get all records to find their Firestore IDs
             const allRecords = getFromStorage('harvestRecords', []);
+            console.log('📊 All records:', allRecords.length);
+            
             const recordIdsArray = recordIds.split(',');
+            console.log('🔍 Looking for IDs:', recordIdsArray);
             
             // Find the Firestore document IDs for these records
             const firestoreIdsToDelete = [];
             allRecords.forEach(record => {
+                console.log('Checking record:', record.id, 'Firestore ID:', record.firestoreId);
                 if (recordIdsArray.includes(String(record.id))) {
                     if (record.firestoreId) {
                         firestoreIdsToDelete.push(record.firestoreId);
+                        console.log('✅ Found Firestore ID to delete:', record.firestoreId);
+                    } else {
+                        console.warn('⚠️ Record has no firestoreId:', record.id);
                     }
                 }
             });
             
+            console.log('🎯 Firestore IDs to delete:', firestoreIdsToDelete);
+            
             if (firestoreIdsToDelete.length === 0) {
+                console.error('❌ No Firestore IDs found');
                 showToast('Could not find records to delete');
                 return Promise.resolve(false);
             }
             
             // Delete from Firestore
             const deletePromises = firestoreIdsToDelete.map(firestoreId => {
+                console.log('🔥 Deleting:', firestoreId);
                 return db.collection('harvestRecords').doc(firestoreId).delete();
             });
             
             return Promise.all(deletePromises)
                 .then(() => {
+                    console.log('✅ Delete successful');
                     showToast('Record deleted');
                     return true;
                 })
                 .catch((error) => {
-                    console.error('Error deleting:', error);
-                    showToast('Failed to delete record');
+                    console.error('❌ Error deleting:', error);
+                    showToast('Failed to delete record: ' + error.message);
                     return false;
                 });
         }
