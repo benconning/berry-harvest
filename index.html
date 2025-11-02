@@ -1269,14 +1269,31 @@ Block C</textarea>
         
         // Delete record from Firestore
         function deleteRecordFromFirestore(recordIds) {
-            const batch = db.batch();
+            // Get all records to find their Firestore IDs
+            const allRecords = getFromStorage('harvestRecords', []);
+            const recordIdsArray = recordIds.split(',');
             
-            recordIds.forEach(id => {
-                const ref = db.collection('harvestRecords').doc(String(id));
-                batch.delete(ref);
+            // Find the Firestore document IDs for these records
+            const firestoreIdsToDelete = [];
+            allRecords.forEach(record => {
+                if (recordIdsArray.includes(String(record.id))) {
+                    if (record.firestoreId) {
+                        firestoreIdsToDelete.push(record.firestoreId);
+                    }
+                }
             });
             
-            return batch.commit()
+            if (firestoreIdsToDelete.length === 0) {
+                showToast('Could not find records to delete');
+                return Promise.resolve(false);
+            }
+            
+            // Delete from Firestore
+            const deletePromises = firestoreIdsToDelete.map(firestoreId => {
+                return db.collection('harvestRecords').doc(firestoreId).delete();
+            });
+            
+            return Promise.all(deletePromises)
                 .then(() => {
                     showToast('Record deleted');
                     return true;
@@ -1308,6 +1325,21 @@ Block C</textarea>
                 db.collection('settings').doc(key).onSnapshot((doc) => {
                     if (doc.exists) {
                         window.firebaseCache[key] = doc.data().data;
+                        console.log(`✅ ${key} synced:`, doc.data().data);
+                        
+                        // If employees updated and we're on an employee screen, reload
+                        if (key === 'employees') {
+                            const currentScreenId = document.querySelector('.screen.active')?.id;
+                            if (currentScreenId === 'clockInScreen') {
+                                loadClockInScreen();
+                            } else if (currentScreenId === 'clockOutScreen') {
+                                loadClockOutScreen();
+                            } else if (currentScreenId === 'printStickersScreen') {
+                                loadPrintStickersScreen();
+                            } else if (currentScreenId === 'manualEntryScreen') {
+                                loadManualEntryScreen();
+                            }
+                        }
                     } else {
                         // Initialize with defaults
                         let defaultValue;
@@ -1358,6 +1390,8 @@ Block C</textarea>
                     });
                 });
                 window.firebaseCache['harvestRecords'] = records;
+                
+                console.log('📊 Records updated:', records.length);
                 
                 // Update display if on records screen
                 const recordsScreen = document.getElementById('recordsScreen');
@@ -2308,6 +2342,13 @@ Block C</textarea>
                 return;
             }
             
+            // Get employees list to map IDs to names
+            const employees = getFromStorage('employees', []);
+            const employeeMap = {};
+            employees.forEach(emp => {
+                employeeMap[emp.id] = emp.name;
+            });
+            
             // Aggregate records by batch, picker, variety, block, and size
             const aggregated = {};
             records.forEach(record => {
@@ -2317,6 +2358,7 @@ Block C</textarea>
                     aggregated[key] = {
                         batch_id: record.batch_id,
                         picker_id: record.picker_id,
+                        picker_name: employeeMap[record.picker_id] || record.picker_id,
                         variety: record.variety,
                         block: record.block,
                         size: record.size,
@@ -2354,7 +2396,7 @@ Block C</textarea>
                 html += '<tr>';
                 html += `<td>#${record.batch_id}</td>`;
                 html += `<td>${formatDate(record.timestamp)}</td>`;
-                html += `<td>${record.picker_id}</td>`;
+                html += `<td>${record.picker_name}</td>`;
                 html += `<td>${record.variety}</td>`;
                 html += `<td>${record.block}</td>`;
                 html += `<td>${record.size}</td>`;
@@ -2391,9 +2433,22 @@ Block C</textarea>
                 return;
             }
             
+            // Get employees list to map IDs to names
+            const employees = getFromStorage('employees', []);
+            const employeeMap = {};
+            employees.forEach(emp => {
+                employeeMap[emp.id] = emp.name;
+            });
+            
             const groups = {};
             records.forEach(record => {
-                const key = record[groupBy];
+                let key = record[groupBy];
+                
+                // If grouping by picker, use name instead of ID
+                if (groupBy === 'picker') {
+                    key = employeeMap[record.picker_id] || record.picker_id;
+                }
+                
                 if (!groups[key]) {
                     groups[key] = [];
                 }
