@@ -130,6 +130,37 @@
             margin-bottom: 10px;
         }
         
+        /* Fruit-specific colors */
+        .tile.strawberry {
+            background: linear-gradient(135deg, #ff6b9d 0%, #ffa5c3 100%);
+            border-color: #ff1744;
+            color: white;
+        }
+        
+        .tile.raspberry {
+            background: linear-gradient(135deg, #c21e56 0%, #e74c3c 100%);
+            border-color: #c21e56;
+            color: white;
+        }
+        
+        .tile.boysenberry {
+            background: linear-gradient(135deg, #5b2c6f 0%, #8e44ad 100%);
+            border-color: #5b2c6f;
+            color: white;
+        }
+        
+        .tile.karaka {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            border-color: #2c3e50;
+            color: white;
+        }
+        
+        .tile.employee {
+            background: linear-gradient(135deg, #3498db 0%, #5dade2 100%);
+            border-color: #3498db;
+            color: white;
+        }
+        
         /* Forms */
         .form-group {
             margin-bottom: 20px;
@@ -575,6 +606,96 @@
             margin-bottom: 10px;
         }
         
+        /* Sortable table */
+        .records-table th,
+        .records-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .records-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+            user-select: none;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .records-table th:hover {
+            background: #e9ecef;
+        }
+        
+        .records-table th.sortable::after {
+            content: ' ⇅';
+            opacity: 0.3;
+        }
+        
+        .records-table th.sort-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+        
+        .records-table th.sort-desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+        
+        .records-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .records-table td.partial {
+            background: #fff3cd;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .summary-label {
+            font-weight: 500;
+            color: #666;
+        }
+        
+        .summary-value {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .block-settings {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .block-settings-header {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .block-settings input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        
         /* Settings */
         .settings-section {
             background: white;
@@ -625,55 +746,59 @@
     <!-- Home Screen -->
     <div class="screen active" id="homeScreen">
         <div class="tiles-container">
-            <div class="tile" onclick="navigateToScreen('strawberryScanScreen')">
+            <div class="tile strawberry" onclick="navigateToFruit('strawberries')">
                 <div class="emoji">🍓</div>
-                <div>Strawberry Scan</div>
+                <div>Strawberries</div>
             </div>
-            <div class="tile" onclick="navigateToScreen('manualEntryScreen')">
-                <div class="emoji">✍️</div>
-                <div>Strawberry Manual Entry</div>
+            <div class="tile raspberry" onclick="navigateToFruit('raspberries')">
+                <div class="emoji">🫐</div>
+                <div>Raspberries</div>
             </div>
-            <div class="tile" onclick="navigateToScreen('employeeMenuScreen')">
+            <div class="tile boysenberry" onclick="navigateToFruit('boysenberries')">
+                <div class="emoji">🫐</div>
+                <div>Boysenberries</div>
+            </div>
+            <div class="tile karaka" onclick="navigateToFruit('karakaBerries')">
+                <div class="emoji">🫐</div>
+                <div>Karaka Berries</div>
+            </div>
+            <div class="tile employee" onclick="navigateToScreen('employeeMenuScreen')">
                 <div class="emoji">👥</div>
-                <div>Employee</div>
-            </div>
-            <div class="tile" onclick="navigateToScreen('recordsScreen')">
-                <div class="emoji">📄</div>
-                <div>Records</div>
-            </div>
-            <div class="tile" onclick="navigateToScreen('settingsMenuScreen')">
-                <div class="emoji">⚙️</div>
-                <div>Settings</div>
+                <div>Employees</div>
             </div>
         </div>
     </div>
     
-    <!-- Strawberry Scan Screen -->
-    <div class="screen" id="strawberryScanScreen">
-        <div class="batch-pill" id="batchPill">Batch #1 - 0 crates</div>
+    <!-- Fruit Menu Screen (dynamically set) -->
+    <div class="screen" id="fruitMenuScreen">
+        <div class="tiles-container" id="fruitMenuTiles">
+            <!-- Will be populated dynamically -->
+        </div>
+    </div>
+    
+    <!-- Scan Screen -->
+    <div class="screen" id="scanScreen">
+        <h2 style="margin-bottom: 20px;">Scan Crate</h2>
         
         <div class="form-group">
-            <label for="variety">Variety</label>
-            <select id="variety"></select>
+            <label for="scanVariety">Variety *</label>
+            <select id="scanVariety" required></select>
         </div>
         
         <div class="form-group">
-            <label for="block">Block</label>
-            <select id="block"></select>
+            <label for="scanBlock">Block *</label>
+            <select id="scanBlock" required></select>
         </div>
         
         <div class="form-group">
-            <label for="size">Size</label>
-            <select id="size">
+            <label for="scanSize">Size *</label>
+            <select id="scanSize" required>
                 <option value="">Select Size</option>
-                <option value="Small">Small</option>
-                <option value="Medium">Medium</option>
-                <option value="Large">Large</option>
             </select>
         </div>
         
         <div class="btn-group">
-            <button class="btn btn-primary" onclick="openScanner()">📷 Scan Crates</button>
+            <button class="btn btn-success" onclick="startScanning()">📷 Start Scanning</button>
         </div>
     </div>
     
@@ -682,13 +807,8 @@
         <h2 style="margin-bottom: 20px;">Manual Entry</h2>
         
         <div class="form-group">
-            <label for="manualDate">Date *</label>
-            <input type="date" id="manualDate" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="manualPicker">Picker *</label>
-            <select id="manualPicker" required></select>
+            <label for="manualPicker">Picker ID *</label>
+            <input type="text" id="manualPicker" required placeholder="Enter picker ID">
         </div>
         
         <div class="form-group">
@@ -703,22 +823,24 @@
         
         <div class="form-group">
             <label for="manualSize">Size *</label>
-            <select id="manualSize" required>
+            <select id="manualSize" required onchange="toggleManualEntryFields()">
                 <option value="">Select Size</option>
-                <option value="Small">Small</option>
-                <option value="Medium">Medium</option>
-                <option value="Large">Large</option>
             </select>
         </div>
         
-        <div class="form-group">
+        <div class="form-group" id="manualCratesGroup">
             <label for="manualCrates">Number of Full Crates *</label>
             <input type="number" id="manualCrates" min="0" value="0" required>
         </div>
         
-        <div class="form-group">
+        <div class="form-group" id="manualPartialGroup">
             <label for="manualPartialPunnets">Punnets in Partial Crate</label>
             <input type="number" id="manualPartialPunnets" min="0" placeholder="Leave blank if none">
+        </div>
+        
+        <div class="form-group" id="manualWeightGroup" style="display: none;">
+            <label for="manualWeight">Weight (kg) *</label>
+            <input type="number" id="manualWeight" min="0" step="0.01" placeholder="Enter weight in kg">
         </div>
         
         <div class="btn-group">
@@ -737,7 +859,7 @@
             <div class="scanner-controls">
                 <div class="scanner-status" id="scannerStatus">Initializing camera...</div>
                 <div class="partial-crate-container">
-                    <input type="checkbox" id="partialCrate">
+                    <input type="checkbox" id="partialCrate" onchange="togglePartialCrate()">
                     <label for="partialCrate" style="color: white; margin: 0;">Partial crate</label>
                     <input type="number" id="manualPunnets" min="1" max="50" placeholder="Punnets" style="display: none;">
                 </div>
@@ -893,89 +1015,127 @@
     
     <!-- Records Screen -->
     <div class="screen" id="recordsScreen">
-        <div class="filters">
-            <div class="filter-row">
-                <select id="filterTime">
-                    <option value="today">Today</option>
-                    <option value="week">Last 7 days</option>
-                    <option value="month">This month</option>
-                    <option value="all">All</option>
-                </select>
-                <select id="filterVariety">
-                    <option value="all">All Varieties</option>
-                </select>
-                <select id="filterBlock">
-                    <option value="all">All Blocks</option>
-                </select>
-                <select id="filterGroupBy">
-                    <option value="none">No Grouping</option>
-                    <option value="variety">Group by Variety</option>
-                    <option value="block">Group by Block</option>
-                    <option value="picker">Group by Picker</option>
-                </select>
+        <div class="records-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+            <h2>Harvest Records</h2>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="exportCSV()">📥 Export CSV</button>
+                <button class="btn btn-danger" onclick="clearAllRecords()">🗑️ Clear All</button>
             </div>
         </div>
         
-        <div class="kpi-container" id="kpiContainer">
-            <div class="kpi-card">
-                <div class="kpi-value" id="kpiCrates">0</div>
-                <div class="kpi-label">Crates</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-value" id="kpiPunnets">0</div>
-                <div class="kpi-label">Punnets</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-value" id="kpiKg">0</div>
-                <div class="kpi-label">Kg</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-value" id="kpiKgPerPlant">0</div>
-                <div class="kpi-label">Kg/Plant</div>
-            </div>
+        <div class="records-filters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px;">
+            <input type="date" id="filterDate" placeholder="Filter by date" onchange="applyFilters()">
+            <select id="filterVariety" onchange="applyFilters()">
+                <option value="">All Varieties</option>
+            </select>
+            <select id="filterBlock" onchange="applyFilters()">
+                <option value="">All Blocks</option>
+            </select>
+            <select id="filterSize" onchange="applyFilters()">
+                <option value="">All Sizes</option>
+            </select>
+            <select id="filterGrade" onchange="applyFilters()">
+                <option value="">All Grades</option>
+                <option value="First">Firsts</option>
+                <option value="Second">Seconds</option>
+            </select>
+            <input type="text" id="filterPicker" placeholder="Filter by picker" oninput="applyFilters()">
         </div>
         
-        <div id="summaryTableContainer"></div>
-        <div id="recordsTableContainer"></div>
+        <div class="records-table-container" style="overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <table class="records-table" style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                <thead>
+                    <tr>
+                        <th class="sortable" onclick="sortRecords('timestamp')">Date/Time</th>
+                        <th class="sortable" onclick="sortRecords('batch_id')">Batch</th>
+                        <th class="sortable" onclick="sortRecords('picker_id')">Picker</th>
+                        <th class="sortable" onclick="sortRecords('crate_id')">Crate ID</th>
+                        <th class="sortable" onclick="sortRecords('variety')">Variety</th>
+                        <th class="sortable" onclick="sortRecords('block')">Block</th>
+                        <th class="sortable" onclick="sortRecords('size')">Size</th>
+                        <th class="sortable" onclick="sortRecords('grade')">Grade</th>
+                        <th class="sortable" onclick="sortRecords('total_punnets')">Punnets</th>
+                        <th class="sortable" onclick="sortRecords('total_weight_kg')">Weight (kg)</th>
+                        <th>Partial</th>
+                    </tr>
+                </thead>
+                <tbody id="recordsTableBody">
+                    <!-- Records will be populated here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="summary-card" id="recordsSummary" style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 20px;">
+            <!-- Summary will be populated here -->
+        </div>
+    </div>
+    
+    <!-- Fruit Settings Screen -->
+    <div class="screen" id="settingsScreen">
+        <h2 style="margin-bottom: 20px;">Fruit Settings</h2>
+        
+        <h3 style="margin: 20px 0 10px;">Punnet Settings</h3>
+        <table class="settings-table" style="width: 100%; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+            <thead>
+                <tr>
+                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #eee; background: #f8f9fa; font-weight: 600;">Size</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #eee; background: #f8f9fa; font-weight: 600;">Grade</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #eee; background: #f8f9fa; font-weight: 600;">Punnets/Crate</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #eee; background: #f8f9fa; font-weight: 600;">Weight (g)</th>
+                </tr>
+            </thead>
+            <tbody id="punnetSettingsBody">
+                <!-- Will be populated dynamically -->
+            </tbody>
+        </table>
+        
+        <h3 style="margin: 20px 0 10px;">Varieties</h3>
+        <div class="form-group">
+            <textarea id="varietiesList" placeholder="Enter varieties, one per line" style="min-height: 120px;"></textarea>
+        </div>
+        
+        <h3 style="margin: 20px 0 10px;">Blocks</h3>
+        <div class="form-group">
+            <textarea id="blocksList" placeholder="Enter blocks, one per line" style="min-height: 120px;"></textarea>
+        </div>
         
         <div class="btn-group">
-            <button class="btn btn-primary" onclick="exportCSV()">📁 Export CSV</button>
-            <button class="btn btn-danger" onclick="clearAllRecords()">🗑️ Clear All</button>
+            <button class="btn btn-success" onclick="saveSettings()">💾 Save Settings</button>
         </div>
     </div>
     
-    <!-- Settings Menu Screen -->
-    <div class="screen" id="settingsMenuScreen">
-        <div class="tiles-container">
-            <div class="tile" onclick="navigateToScreen('pickingSettingsScreen')">
-                <div class="emoji">🍓</div>
-                <div>Picking Settings</div>
-            </div>
-            <div class="tile" onclick="navigateToScreen('employeeSettingsScreen')">
-                <div class="emoji">👥</div>
-                <div>Employee Settings</div>
-            </div>
-            <div class="tile" onclick="navigateToScreen('dataSettingsScreen')">
-                <div class="emoji">📊</div>
-                <div>Data Settings</div>
+    <!-- Data Settings Screen -->
+    <div class="screen" id="dataSettingsScreen">
+        <h2 style="margin-bottom: 20px;">Data Settings</h2>
+        
+        <h3 style="margin: 20px 0 10px;">Plants Per Block</h3>
+        <div id="plantsPerBlockContainer">
+            <!-- Will be populated dynamically based on blocks -->
+        </div>
+        
+        <div class="btn-group">
+            <button class="btn btn-success" onclick="saveDataSettings()">💾 Save Settings</button>
+        </div>
+        
+        <div class="summary-card" id="kgPerPlantSummary" style="display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 20px;">
+            <h3 style="margin-bottom: 15px;">Kg/Plant per Block</h3>
+            <div id="kgPerPlantContent">
+                <!-- Will be populated with calculations -->
             </div>
         </div>
     </div>
     
-    <!-- Picking Settings Screen -->
-    <div class="screen" id="pickingSettingsScreen">
-        <div class="settings-section">
-            <h3>Punnet Settings</h3>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Size</th>
-                            <th>Punnets/Crate</th>
-                            <th>Weight (g)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+    <!-- Settings Menu Screen (removed, no longer needed) -->
+    <div class="screen" id="settingsMenuScreen" style="display: none;">
+    </div>
+    
+    <!-- Picking Settings Screen (removed) -->
+    <div class="screen" id="pickingSettingsScreen" style="display: none;">
+    </div>
+    
+    <!-- Employee Settings Screen (removed) -->
+    <div class="screen" id="employeeSettingsScreen" style="display: none;">
+        
                         <tr>
                             <td>Small</td>
                             <td><input type="number" id="smallPunnets" value="32" min="1"></td>
@@ -1080,14 +1240,86 @@ Block C</textarea>
     </script>
     
     <script>
-        // ============= NAVIGATION STACK =============
+        // ============= GLOBAL STATE =============
         let navigationStack = [];
+        let currentFruit = null;
+        let currentBatchId = 1;
+        let scanContext = null;
+        let scanner = null;
+        let clockCamera = null;
+        let clockEmployee = null;
+        let clockAction = null;
+        let clockPhoto = null;
+        
+        // Firebase cache
+        window.firebaseCache = {};
+        
+        // Fruit configurations
+        const fruitConfig = {
+            strawberries: { name: 'Strawberries', emoji: '🍓', color: 'strawberry' },
+            raspberries: { name: 'Raspberries', emoji: '🫐', color: 'raspberry' },
+            boysenberries: { name: 'Boysenberries', emoji: '🫐', color: 'boysenberry' },
+            karakaBerries: { name: 'Karaka Berries', emoji: '🫐', color: 'karaka' }
+        };
+        
+        // Size configurations
+        const sizes = ['Small', 'Medium', 'Large', 'Seconds', 'Frozen'];
+        const grades = ['First', 'Second'];
+        
+        // ============= TIMEZONE UTILITIES =============
+        function getNZDateTime() {
+            return new Date().toLocaleString('en-NZ', { 
+                timeZone: 'Pacific/Auckland',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+        }
+        
+        function formatNZDateTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString('en-NZ', {
+                timeZone: 'Pacific/Auckland',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+        }
+        
+        function formatNZDate(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleDateString('en-NZ', {
+                timeZone: 'Pacific/Auckland',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+        
+        function formatNZTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString('en-NZ', {
+                timeZone: 'Pacific/Auckland',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+        }
+        
+        // ============= NAVIGATION STACK =============
         
         function navigateToScreen(screenId) {
             // Save current screen to stack
-            const currentScreen = document.querySelector('.screen.active').id;
-            if (currentScreen !== 'homeScreen') {
-                navigationStack.push(currentScreen);
+            const currentScreen = document.querySelector('.screen.active');
+            if (currentScreen && currentScreen.id !== 'homeScreen') {
+                navigationStack.push(currentScreen.id);
             }
             
             // Hide all screens
@@ -1098,11 +1330,15 @@ Block C</textarea>
             // Show selected screen
             document.getElementById(screenId).classList.add('active');
             
+            // Update header title
+            updateHeaderTitle(screenId);
+            
             // Show/hide back button
             const backBtn = document.getElementById('backBtn');
             if (screenId === 'homeScreen') {
                 backBtn.style.display = 'none';
                 navigationStack = [];
+                currentFruit = null;
             } else {
                 backBtn.style.display = 'flex';
             }
@@ -1111,8 +1347,63 @@ Block C</textarea>
             loadScreenData(screenId);
         }
         
+        function navigateToFruit(fruitType) {
+            currentFruit = fruitType;
+            const config = fruitConfig[fruitType];
+            
+            // Update fruit menu tiles
+            const tilesContainer = document.getElementById('fruitMenuTiles');
+            tilesContainer.innerHTML = `
+                <div class="tile" onclick="navigateToScreen('scanScreen')">
+                    <div class="emoji">📷</div>
+                    <div>Scan Crate</div>
+                </div>
+                <div class="tile" onclick="navigateToScreen('manualEntryScreen')">
+                    <div class="emoji">✍️</div>
+                    <div>Manual Entry</div>
+                </div>
+                <div class="tile" onclick="navigateToScreen('recordsScreen')">
+                    <div class="emoji">📊</div>
+                    <div>View Records</div>
+                </div>
+                <div class="tile" onclick="navigateToScreen('settingsScreen')">
+                    <div class="emoji">⚙️</div>
+                    <div>Settings</div>
+                </div>
+                <div class="tile" onclick="navigateToScreen('dataSettingsScreen')">
+                    <div class="emoji">📈</div>
+                    <div>Data Settings</div>
+                </div>
+            `;
+            
+            navigateToScreen('fruitMenuScreen');
+        }
+        
+        function updateHeaderTitle(screenId) {
+            const titleMap = {
+                'homeScreen': 'Connings MGM',
+                'fruitMenuScreen': currentFruit ? fruitConfig[currentFruit].name : 'Select Option',
+                'scanScreen': 'Scan Crate',
+                'manualEntryScreen': 'Manual Entry',
+                'recordsScreen': 'Harvest Records',
+                'settingsScreen': 'Fruit Settings',
+                'dataSettingsScreen': 'Data Settings',
+                'employeeMenuScreen': 'Employees',
+                'enrollEmployeeScreen': 'Enrol Employee',
+                'clockInOutMenuScreen': 'Clock In/Out',
+                'clockInScreen': 'Clock In',
+                'clockOutScreen': 'Clock Out',
+                'printStickersScreen': 'Print Stickers',
+                'timeRecordsScreen': 'Time Records'
+            };
+            
+            const headerTitle = document.querySelector('.header-title');
+            headerTitle.textContent = titleMap[screenId] || 'Connings MGM';
+        }
+        
         function goHome() {
             navigationStack = [];
+            currentFruit = null;
             navigateToScreen('homeScreen');
         }
         
@@ -1123,10 +1414,12 @@ Block C</textarea>
                     screen.classList.remove('active');
                 });
                 document.getElementById(previousScreen).classList.add('active');
+                updateHeaderTitle(previousScreen);
                 loadScreenData(previousScreen);
                 
                 if (previousScreen === 'homeScreen') {
                     document.getElementById('backBtn').style.display = 'none';
+                    currentFruit = null;
                 }
             } else {
                 goHome();
@@ -1135,11 +1428,22 @@ Block C</textarea>
         
         function loadScreenData(screenId) {
             switch(screenId) {
-                case 'strawberryScanScreen':
+                case 'scanScreen':
+                    loadScanScreen();
+                    break;
                     loadStrawberryScreen();
                     break;
                 case 'manualEntryScreen':
                     loadManualEntryScreen();
+                    break;
+                case 'recordsScreen':
+                    loadRecordsScreen();
+                    break;
+                case 'settingsScreen':
+                    loadSettingsScreen();
+                    break;
+                case 'dataSettingsScreen':
+                    loadDataSettingsScreen();
                     break;
                 case 'clockInScreen':
                     loadClockInScreen();
@@ -2625,6 +2929,686 @@ Block C</textarea>
         window.addEventListener('load', () => {
             initializeStorage();
         });
+
+        // ============= SCAN SCREEN =============
+        function loadScanScreen() {
+            if (!currentFruit) return;
+            
+            const varieties = getFromStorage('varieties', []);
+            const blocks = getFromStorage('blocks', []);
+            const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            
+            const varietySelect = document.getElementById('scanVariety');
+            varietySelect.innerHTML = '<option value="">Select Variety</option>';
+            varieties.forEach(v => {
+                varietySelect.innerHTML += `<option value="${v}">${v}</option>`;
+            });
+            
+            const blockSelect = document.getElementById('scanBlock');
+            blockSelect.innerHTML = '<option value="">Select Block</option>';
+            blocks.forEach(b => {
+                blockSelect.innerHTML += `<option value="${b}">${b}</option>`;
+            });
+            
+            const sizeSelect = document.getElementById('scanSize');
+            sizeSelect.innerHTML = '<option value="">Select Size</option>';
+            Object.keys(punnetSettings).forEach(s => {
+                sizeSelect.innerHTML += `<option value="${s}">${s}</option>`;
+            });
+        }
+        
+        function startScanning() {
+            const variety = document.getElementById('scanVariety').value;
+            const block = document.getElementById('scanBlock').value;
+            const size = document.getElementById('scanSize').value;
+            
+            if (!variety || !block || !size) {
+                showToast('Please fill in all fields');
+                return;
+            }
+            
+            scanContext = { variety, block, size };
+            currentBatchId = getFromStorage('currentBatchId', 1);
+            
+            document.getElementById('scannerOverlay').style.display = 'block';
+            document.getElementById('scannerBatchLabel').textContent = `Batch #${currentBatchId}`;
+            
+            initializeScanner();
+        }
+        
+        function initializeScanner() {
+            const videoElement = document.getElementById('preview');
+            
+            scanner = new Instascan.Scanner({ 
+                video: videoElement,
+                mirror: false
+            });
+            
+            scanner.addListener('scan', function(content) {
+                handleScannedCode(content);
+            });
+            
+            Instascan.Camera.getCameras().then(function(cameras) {
+                if (cameras.length > 0) {
+                    const backCamera = cameras.find(cam => cam.name.toLowerCase().includes('back')) || cameras[0];
+                    scanner.start(backCamera);
+                    document.getElementById('scannerStatus').textContent = 'Ready to scan';
+                    document.getElementById('captureButton').disabled = false;
+                } else {
+                    document.getElementById('scannerStatus').textContent = 'No cameras found';
+                    showToast('No cameras available');
+                }
+            }).catch(function(e) {
+                console.error(e);
+                document.getElementById('scannerStatus').textContent = 'Camera error';
+                showToast('Camera access denied');
+            });
+        }
+        
+        function togglePartialCrate() {
+            const checkbox = document.getElementById('partialCrate');
+            const punnetsInput = document.getElementById('manualPunnets');
+            punnetsInput.style.display = checkbox.checked ? 'block' : 'none';
+        }
+        
+        function handleScannedCode(code) {
+            const parts = code.split('-');
+            if (parts.length !== 2) {
+                showToast('Invalid QR code format');
+                return;
+            }
+            
+            const pickerId = parts[0];
+            const crateId = parts[1];
+            
+            saveHarvestEntry(pickerId, crateId);
+        }
+        
+        function saveHarvestEntry(pickerId, crateId) {
+            const isPartial = document.getElementById('partialCrate').checked;
+            const partialPunnets = isPartial ? parseInt(document.getElementById('manualPunnets').value) || 0 : 0;
+            
+            const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            const sizeSettings = punnetSettings[scanContext.size];
+            
+            let totalPunnets, totalWeight;
+            
+            if (scanContext.size === 'Frozen') {
+                totalPunnets = 0;
+                totalWeight = 0;
+            } else {
+                totalPunnets = isPartial ? partialPunnets : sizeSettings.punnetsPerCrate;
+                totalWeight = (totalPunnets * sizeSettings.punnetWeightG) / 1000;
+            }
+            
+            const record = {
+                timestamp: Date.now(),
+                batch_id: currentBatchId,
+                picker_id: pickerId,
+                crate_id: crateId,
+                variety: scanContext.variety,
+                block: scanContext.block,
+                size: scanContext.size,
+                grade: sizeSettings.grade,
+                total_punnets: totalPunnets,
+                total_weight_kg: totalWeight,
+                is_partial: isPartial,
+                fruit_type: currentFruit
+            };
+            
+            saveHarvestRecord(record).then(() => {
+                showToast(`Recorded: ${pickerId} - Crate ${crateId}`);
+                document.getElementById('scannerStatus').textContent = `Last scan: ${pickerId} - ${crateId}`;
+                
+                document.getElementById('partialCrate').checked = false;
+                document.getElementById('manualPunnets').style.display = 'none';
+                document.getElementById('manualPunnets').value = '';
+            });
+        }
+        
+        function moreCrates() {
+            document.getElementById('scannerStatus').textContent = 'Ready for next crate';
+            showToast('Scan next crate');
+        }
+        
+        function completeBatch() {
+            if (scanner) {
+                scanner.stop();
+            }
+            
+            currentBatchId++;
+            saveToStorage('currentBatchId', currentBatchId);
+            
+            document.getElementById('scannerOverlay').style.display = 'none';
+            showToast('Batch completed!');
+            
+            navigateToScreen('scanScreen');
+        }
+        
+        function closeScanner() {
+            if (scanner) {
+                scanner.stop();
+            }
+            document.getElementById('scannerOverlay').style.display = 'none';
+        }
+        
+        function captureCode() {
+            const pickerId = prompt('Enter Picker ID:');
+            const crateId = prompt('Enter Crate ID:');
+            
+            if (pickerId && crateId) {
+                handleScannedCode(`${pickerId}-${crateId}`);
+            }
+        }
+        
+        // ============= MANUAL ENTRY =============
+        function loadManualEntryScreen() {
+            if (!currentFruit) return;
+            
+            const varieties = getFromStorage('varieties', []);
+            const blocks = getFromStorage('blocks', []);
+            const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            
+            const varietySelect = document.getElementById('manualVariety');
+            varietySelect.innerHTML = '<option value="">Select Variety</option>';
+            varieties.forEach(v => {
+                varietySelect.innerHTML += `<option value="${v}">${v}</option>`;
+            });
+            
+            const blockSelect = document.getElementById('manualBlock');
+            blockSelect.innerHTML = '<option value="">Select Block</option>';
+            blocks.forEach(b => {
+                blockSelect.innerHTML += `<option value="${b}">${b}</option>`;
+            });
+            
+            const sizeSelect = document.getElementById('manualSize');
+            sizeSelect.innerHTML = '<option value="">Select Size</option>';
+            Object.keys(punnetSettings).forEach(s => {
+                sizeSelect.innerHTML += `<option value="${s}">${s}</option>`;
+            });
+        }
+        
+        function toggleManualEntryFields() {
+            const size = document.getElementById('manualSize').value;
+            const cratesGroup = document.getElementById('manualCratesGroup');
+            const partialGroup = document.getElementById('manualPartialGroup');
+            const weightGroup = document.getElementById('manualWeightGroup');
+            
+            if (size === 'Frozen') {
+                cratesGroup.style.display = 'none';
+                partialGroup.style.display = 'none';
+                weightGroup.style.display = 'block';
+            } else {
+                cratesGroup.style.display = 'block';
+                partialGroup.style.display = 'block';
+                weightGroup.style.display = 'none';
+            }
+        }
+        
+        function saveManualEntry() {
+            const pickerId = document.getElementById('manualPicker').value.trim();
+            const variety = document.getElementById('manualVariety').value;
+            const block = document.getElementById('manualBlock').value;
+            const size = document.getElementById('manualSize').value;
+            
+            if (!pickerId || !variety || !block || !size) {
+                showToast('Please fill in all required fields');
+                return;
+            }
+            
+            const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            const sizeSettings = punnetSettings[size];
+            
+            let totalPunnets, totalWeight, isPartial;
+            
+            if (size === 'Frozen') {
+                const weight = parseFloat(document.getElementById('manualWeight').value);
+                if (!weight) {
+                    showToast('Please enter weight');
+                    return;
+                }
+                totalPunnets = 0;
+                totalWeight = weight;
+                isPartial = false;
+            } else {
+                const fullCrates = parseInt(document.getElementById('manualCrates').value) || 0;
+                const partialPunnets = parseInt(document.getElementById('manualPartialPunnets').value) || 0;
+                
+                totalPunnets = (fullCrates * sizeSettings.punnetsPerCrate) + partialPunnets;
+                totalWeight = (totalPunnets * sizeSettings.punnetWeightG) / 1000;
+                isPartial = partialPunnets > 0;
+            }
+            
+            const crateId = `M${Date.now().toString().slice(-6)}`;
+            const batchId = getFromStorage('currentBatchId', 1);
+            
+            const record = {
+                timestamp: Date.now(),
+                batch_id: batchId,
+                picker_id: pickerId,
+                crate_id: crateId,
+                variety: variety,
+                block: block,
+                size: size,
+                grade: sizeSettings.grade,
+                total_punnets: totalPunnets,
+                total_weight_kg: totalWeight,
+                is_partial: isPartial,
+                fruit_type: currentFruit
+            };
+            
+            saveHarvestRecord(record).then(() => {
+                showToast('Entry saved successfully!');
+                
+                document.getElementById('manualPicker').value = '';
+                document.getElementById('manualCrates').value = '0';
+                document.getElementById('manualPartialPunnets').value = '';
+                document.getElementById('manualWeight').value = '';
+            });
+        }
+        
+        // ============= RECORDS SCREEN =============
+        let currentSort = { column: 'timestamp', direction: 'desc' };
+        let currentFilters = {};
+        
+        function loadRecordsScreen() {
+            if (!currentFruit) return;
+            
+            const varieties = getFromStorage('varieties', []);
+            const blocks = getFromStorage('blocks', []);
+            const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            
+            const filterVariety = document.getElementById('filterVariety');
+            filterVariety.innerHTML = '<option value="">All Varieties</option>';
+            varieties.forEach(v => {
+                filterVariety.innerHTML += `<option value="${v}">${v}</option>`;
+            });
+            
+            const filterBlock = document.getElementById('filterBlock');
+            filterBlock.innerHTML = '<option value="">All Blocks</option>';
+            blocks.forEach(b => {
+                filterBlock.innerHTML += `<option value="${b}">${b}</option>`;
+            });
+            
+            const filterSize = document.getElementById('filterSize');
+            filterSize.innerHTML = '<option value="">All Sizes</option>';
+            Object.keys(punnetSettings).forEach(s => {
+                filterSize.innerHTML += `<option value="${s}">${s}</option>`;
+            });
+            
+            updateRecordsDisplay();
+        }
+        
+        function sortRecords(column) {
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'desc';
+            }
+            
+            updateRecordsDisplay();
+        }
+        
+        function applyFilters() {
+            currentFilters = {
+                date: document.getElementById('filterDate').value,
+                variety: document.getElementById('filterVariety').value,
+                block: document.getElementById('filterBlock').value,
+                size: document.getElementById('filterSize').value,
+                grade: document.getElementById('filterGrade').value,
+                picker: document.getElementById('filterPicker').value.toLowerCase()
+            };
+            
+            updateRecordsDisplay();
+        }
+        
+        function filterRecords(records) {
+            return records.filter(record => {
+                if (currentFilters.date) {
+                    const recordDate = formatNZDate(record.timestamp);
+                    const filterDate = new Date(currentFilters.date).toLocaleDateString('en-NZ', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                    if (recordDate !== filterDate) return false;
+                }
+                
+                if (currentFilters.variety && record.variety !== currentFilters.variety) return false;
+                if (currentFilters.block && record.block !== currentFilters.block) return false;
+                if (currentFilters.size && record.size !== currentFilters.size) return false;
+                if (currentFilters.grade && record.grade !== currentFilters.grade) return false;
+                if (currentFilters.picker && !record.picker_id.toLowerCase().includes(currentFilters.picker)) return false;
+                
+                return true;
+            });
+        }
+        
+        function updateRecordsDisplay() {
+            const records = getFromStorage('harvestRecords', []);
+            const filtered = filterRecords(records);
+            
+            filtered.sort((a, b) => {
+                let aVal = a[currentSort.column];
+                let bVal = b[currentSort.column];
+                
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return currentSort.direction === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+                
+                aVal = String(aVal).toLowerCase();
+                bVal = String(bVal).toLowerCase();
+                
+                if (currentSort.direction === 'asc') {
+                    return aVal.localeCompare(bVal);
+                } else {
+                    return bVal.localeCompare(aVal);
+                }
+            });
+            
+            const tbody = document.getElementById('recordsTableBody');
+            tbody.innerHTML = '';
+            
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: #666;">No records found</td></tr>';
+            } else {
+                filtered.forEach(record => {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td>${formatNZDateTime(record.timestamp)}</td>
+                        <td>${record.batch_id}</td>
+                        <td>${record.picker_id}</td>
+                        <td>${record.crate_id}</td>
+                        <td>${record.variety}</td>
+                        <td>${record.block}</td>
+                        <td>${record.size}</td>
+                        <td>${record.grade}</td>
+                        <td>${record.total_punnets}</td>
+                        <td>${record.total_weight_kg.toFixed(2)}</td>
+                        <td class="${record.is_partial ? 'partial' : ''}">${record.is_partial ? 'Yes' : 'No'}</td>
+                    `;
+                });
+            }
+            
+            document.querySelectorAll('.records-table th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+            
+            const sortedHeader = Array.from(document.querySelectorAll('.records-table th')).find(th => {
+                const onclick = th.getAttribute('onclick');
+                return onclick && onclick.includes(currentSort.column);
+            });
+            
+            if (sortedHeader) {
+                sortedHeader.classList.add(`sort-${currentSort.direction}`);
+            }
+            
+            updateRecordsSummary(filtered);
+        }
+        
+        function updateRecordsSummary(records) {
+            const summary = document.getElementById('recordsSummary');
+            
+            const totalPunnets = records.reduce((sum, r) => sum + r.total_punnets, 0);
+            const totalWeight = records.reduce((sum, r) => sum + r.total_weight_kg, 0);
+            const uniquePickers = new Set(records.map(r => r.picker_id)).size;
+            
+            summary.innerHTML = `
+                <div class="summary-item">
+                    <span class="summary-label">Total Records:</span>
+                    <span class="summary-value">${records.length}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total Punnets:</span>
+                    <span class="summary-value">${totalPunnets}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total Weight:</span>
+                    <span class="summary-value">${totalWeight.toFixed(2)} kg</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Unique Pickers:</span>
+                    <span class="summary-value">${uniquePickers}</span>
+                </div>
+            `;
+        }
+        
+        function exportCSV() {
+            const records = getFromStorage('harvestRecords', []);
+            
+            if (records.length === 0) {
+                showToast('No records to export');
+                return;
+            }
+            
+            const filtered = filterRecords(records);
+            
+            if (filtered.length === 0) {
+                showToast('No records match current filters');
+                return;
+            }
+            
+            let csv = 'Date,Time,Batch,Picker,Crate ID,Variety,Block,Size,Grade,Punnets,Weight (kg),Is Partial\n';
+            
+            filtered.forEach(record => {
+                const date = formatNZDate(record.timestamp);
+                const time = formatNZTime(record.timestamp);
+                
+                csv += `"${date}","${time}",${record.batch_id},"${record.picker_id}","${record.crate_id}","${record.variety}","${record.block}","${record.size}","${record.grade}",${record.total_punnets},${record.total_weight_kg.toFixed(2)},${record.is_partial}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const fruitName = currentFruit ? fruitConfig[currentFruit].name : 'harvest';
+            a.download = `${fruitName}_records_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            showToast('CSV exported!');
+        }
+        
+        function clearAllRecords() {
+            if (!confirm('Are you sure you want to delete ALL records for this fruit? This cannot be undone!')) {
+                return;
+            }
+            
+            if (!confirm('Really delete everything? This is your last chance!')) {
+                return;
+            }
+            
+            const collectionName = getCollectionName('harvestRecords');
+            
+            db.collection(collectionName).get().then((snapshot) => {
+                const batch = db.batch();
+                snapshot.docs.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                return batch.commit();
+            }).then(() => {
+                return saveToStorage('currentBatchId', 1);
+            }).then(() => {
+                showToast('All records cleared');
+                updateRecordsDisplay();
+            }).catch((error) => {
+                console.error('Error clearing records:', error);
+                showToast('Error clearing records');
+            });
+        }
+        
+        // ============= SETTINGS =============
+        function loadSettingsScreen() {
+            if (!currentFruit) return;
+            
+            const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            const varieties = getFromStorage('varieties', []);
+            const blocks = getFromStorage('blocks', []);
+            
+            const tbody = document.getElementById('punnetSettingsBody');
+            tbody.innerHTML = '';
+            
+            Object.entries(punnetSettings).forEach(([size, settings]) => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td style="padding: 12px; border-bottom: 1px solid #eee;"><strong>${size}</strong></td>
+                    <td style="padding: 12px; border-bottom: 1px solid #eee;">
+                        <select id="grade_${size}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="First" ${settings.grade === 'First' ? 'selected' : ''}>First</option>
+                            <option value="Second" ${settings.grade === 'Second' ? 'selected' : ''}>Second</option>
+                        </select>
+                    </td>
+                    <td style="padding: 12px; border-bottom: 1px solid #eee;">
+                        <input type="number" id="punnets_${size}" value="${settings.punnetsPerCrate}" min="0" ${size === 'Frozen' ? 'disabled' : ''} style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </td>
+                    <td style="padding: 12px; border-bottom: 1px solid #eee;">
+                        <input type="number" id="weight_${size}" value="${settings.punnetWeightG}" min="0" ${size === 'Frozen' ? 'disabled' : ''} style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </td>
+                `;
+            });
+            
+            document.getElementById('varietiesList').value = varieties.join('\n');
+            document.getElementById('blocksList').value = blocks.join('\n');
+        }
+        
+        function saveSettings() {
+            const punnetSettings = {};
+            
+            sizes.forEach(size => {
+                punnetSettings[size] = {
+                    grade: document.getElementById(`grade_${size}`).value,
+                    punnetsPerCrate: size === 'Frozen' ? 0 : parseInt(document.getElementById(`punnets_${size}`).value),
+                    punnetWeightG: size === 'Frozen' ? 0 : parseInt(document.getElementById(`weight_${size}`).value)
+                };
+            });
+            
+            const varieties = normalizeList(document.getElementById('varietiesList').value);
+            const blocks = normalizeList(document.getElementById('blocksList').value);
+            
+            Promise.all([
+                saveToStorage('punnetSettings', punnetSettings),
+                saveToStorage('varieties', varieties),
+                saveToStorage('blocks', blocks)
+            ]).then(() => {
+                showToast('Settings saved!');
+            });
+        }
+        
+        // ============= DATA SETTINGS =============
+        function loadDataSettingsScreen() {
+            if (!currentFruit) return;
+            
+            const blocks = getFromStorage('blocks', []);
+            const plantsPerBlock = getFromStorage('plantsPerBlock', {});
+            const container = document.getElementById('plantsPerBlockContainer');
+            
+            container.innerHTML = '';
+            
+            if (blocks.length === 0) {
+                container.innerHTML = '<p style="color: #666;">Please add blocks in Settings first</p>';
+                return;
+            }
+            
+            blocks.forEach(block => {
+                const div = document.createElement('div');
+                div.className = 'block-settings';
+                div.innerHTML = `
+                    <div class="block-settings-header">${block}</div>
+                    <input type="number" id="plants_${block}" value="${plantsPerBlock[block] || 1000}" min="0" placeholder="Number of plants">
+                `;
+                container.appendChild(div);
+            });
+            
+            calculateKgPerPlant();
+        }
+        
+        function saveDataSettings() {
+            const blocks = getFromStorage('blocks', []);
+            const plantsPerBlock = {};
+            
+            blocks.forEach(block => {
+                const input = document.getElementById(`plants_${block}`);
+                if (input) {
+                    plantsPerBlock[block] = parseInt(input.value) || 1000;
+                }
+            });
+            
+            saveToStorage('plantsPerBlock', plantsPerBlock).then(() => {
+                showToast('Data settings saved!');
+                calculateKgPerPlant();
+            });
+        }
+        
+        function calculateKgPerPlant() {
+            const records = getFromStorage('harvestRecords', []);
+            const plantsPerBlock = getFromStorage('plantsPerBlock', {});
+            const summaryCard = document.getElementById('kgPerPlantSummary');
+            const content = document.getElementById('kgPerPlantContent');
+            
+            if (records.length === 0) {
+                summaryCard.style.display = 'none';
+                return;
+            }
+            
+            const blockTotals = {};
+            records.forEach(record => {
+                if (!blockTotals[record.block]) {
+                    blockTotals[record.block] = 0;
+                }
+                blockTotals[record.block] += record.total_weight_kg;
+            });
+            
+            content.innerHTML = '';
+            Object.entries(blockTotals).forEach(([block, totalKg]) => {
+                const plants = plantsPerBlock[block] || 1000;
+                const kgPerPlant = totalKg / plants;
+                
+                const div = document.createElement('div');
+                div.className = 'summary-item';
+                div.innerHTML = `
+                    <span class="summary-label">${block} (${plants} plants):</span>
+                    <span class="summary-value">${kgPerPlant.toFixed(3)} kg/plant</span>
+                `;
+                content.appendChild(div);
+            });
+            
+            summaryCard.style.display = 'block';
+        }
+        
+        // ============= UTILITIES =============
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+        
+        function normalizeList(text) {
+            if (!text) return [];
+            text = text.replace(/\\n/g, '\n');
+            const items = text.split(/[\n,]+/);
+            const normalized = [...new Set(items.map(item => item.trim()).filter(item => item))];
+            return normalized;
+        }
+        
+        // ============= INITIALIZATION =============
+        window.addEventListener('load', () => {
+            initializeStorage();
+        });
+        
+        // Prevent zooming on double-tap (iOS)
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
     </script>
 </body>
 </html>
