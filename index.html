@@ -1104,13 +1104,13 @@
                     <tr>
                         <th style="width: 40px; padding: 12px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
                         <th class="sortable" onclick="sortRecords('timestamp')">Date/Time</th>
-                        <th class="sortable" onclick="sortRecords('batch_id')">Batch</th>
                         <th class="sortable" onclick="sortRecords('picker_id')">Picker</th>
                         <th class="sortable" onclick="sortRecords('crate_id')">Crate ID</th>
                         <th class="sortable" onclick="sortRecords('variety')">Variety</th>
                         <th class="sortable" onclick="sortRecords('block')">Block</th>
                         <th class="sortable" onclick="sortRecords('size')">Size</th>
                         <th class="sortable" onclick="sortRecords('grade')">Grade</th>
+                        <th class="sortable" onclick="sortRecords('crate_count')">Crates</th>
                         <th class="sortable" onclick="sortRecords('total_punnets')">Punnets</th>
                         <th class="sortable" onclick="sortRecords('total_weight_kg')">Weight (kg)</th>
                         <th>Partial</th>
@@ -2878,20 +2878,26 @@
             tbody.innerHTML = '';
             
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: #666;">No records found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; color: #666;">No records found</td></tr>';
             } else {
+                const employees = getFromStorage('employees', []);
+                
                 filtered.forEach(record => {
+                    // Find employee name from picker_id
+                    const employee = employees.find(emp => emp.id === record.picker_id);
+                    const pickerName = employee ? employee.name : record.picker_id;
+                    
                     const row = tbody.insertRow();
                     row.innerHTML = `
                         <td style="padding: 12px;"><input type="checkbox" class="record-checkbox" value="${record.id}" onchange="updateDeleteButton()"></td>
                         <td>${formatNZDateTime(record.timestamp)}</td>
-                        <td>${record.batch_id || 'N/A'}</td>
-                        <td>${record.picker_id || 'N/A'}</td>
+                        <td>${pickerName}</td>
                         <td>${record.crate_id || 'N/A'}</td>
                         <td>${record.variety || 'N/A'}</td>
                         <td>${record.block || 'N/A'}</td>
                         <td>${record.size || 'N/A'}</td>
                         <td>${record.grade || '-'}</td>
+                        <td>${record.crate_count || 0}</td>
                         <td>${record.total_punnets || 0}</td>
                         <td>${(record.total_weight_kg || 0).toFixed(2)}</td>
                         <td class="${record.is_partial ? 'partial' : ''}">${record.is_partial ? 'Yes' : 'No'}</td>
