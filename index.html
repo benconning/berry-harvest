@@ -1054,7 +1054,26 @@
             </div>
         </div>
         
-        <!-- KPI Tiles -->
+        <!-- Filter Row -->
+        <div class="records-filters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px;">
+            <select id="filterVariety" onchange="applyFilters()">
+                <option value="">All Varieties</option>
+            </select>
+            <select id="filterBlock" onchange="applyFilters()">
+                <option value="">All Blocks</option>
+            </select>
+            <select id="filterSize" onchange="applyFilters()">
+                <option value="">All Sizes</option>
+            </select>
+            <select id="filterGrade" onchange="applyFilters()">
+                <option value="">All Grades</option>
+                <option value="First">Firsts</option>
+                <option value="Second">Seconds</option>
+            </select>
+            <input type="text" id="filterPicker" placeholder="Filter by picker" oninput="applyFilters()">
+        </div>
+        
+        <!-- KPI Tiles (moved below filters) -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px;">
             <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
                 <div id="kpiCrates" style="font-size: 28px; font-weight: bold; color: #27ae60;">0</div>
@@ -1074,29 +1093,16 @@
             </div>
         </div>
         
-        <div class="records-filters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px;">
-            <input type="date" id="filterDate" placeholder="Filter by date" onchange="applyFilters()">
-            <select id="filterVariety" onchange="applyFilters()">
-                <option value="">All Varieties</option>
-            </select>
-            <select id="filterBlock" onchange="applyFilters()">
-                <option value="">All Blocks</option>
-            </select>
-            <select id="filterSize" onchange="applyFilters()">
-                <option value="">All Sizes</option>
-            </select>
-            <select id="filterGrade" onchange="applyFilters()">
-                <option value="">All Grades</option>
-                <option value="First">Firsts</option>
-                <option value="Second">Seconds</option>
-            </select>
-            <input type="text" id="filterPicker" placeholder="Filter by picker" oninput="applyFilters()">
+        <!-- Delete Selected Button -->
+        <div style="margin-bottom: 15px;">
+            <button class="btn btn-danger" onclick="deleteSelectedRecords()" style="display: none;" id="deleteSelectedBtn">🗑️ Delete Selected</button>
         </div>
         
         <div class="records-table-container" style="overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <table class="records-table" style="width: 100%; border-collapse: collapse; min-width: 800px;">
                 <thead>
                     <tr>
+                        <th style="width: 40px; padding: 12px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
                         <th class="sortable" onclick="sortRecords('timestamp')">Date/Time</th>
                         <th class="sortable" onclick="sortRecords('batch_id')">Batch</th>
                         <th class="sortable" onclick="sortRecords('picker_id')">Picker</th>
@@ -2877,6 +2883,7 @@
                 filtered.forEach(record => {
                     const row = tbody.insertRow();
                     row.innerHTML = `
+                        <td style="padding: 12px;"><input type="checkbox" class="record-checkbox" value="${record.id}" onchange="updateDeleteButton()"></td>
                         <td>${formatNZDateTime(record.timestamp)}</td>
                         <td>${record.batch_id || 'N/A'}</td>
                         <td>${record.picker_id || 'N/A'}</td>
@@ -3151,6 +3158,102 @@
             const items = text.split(/[\n,]+/);
             const normalized = [...new Set(items.map(item => item.trim()).filter(item => item))];
             return normalized;
+        }
+        
+        // ============= DELETE RECORDS =============
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.record-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+            updateDeleteButton();
+        }
+        
+        function updateDeleteButton() {
+            const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+            const deleteBtn = document.getElementById('deleteSelectedBtn');
+            const selectAll = document.getElementById('selectAll');
+            
+            if (checkboxes.length > 0) {
+                deleteBtn.style.display = 'inline-block';
+                deleteBtn.textContent = `🗑️ Delete Selected (${checkboxes.length})`;
+            } else {
+                deleteBtn.style.display = 'none';
+            }
+            
+            // Update select all checkbox state
+            const allCheckboxes = document.querySelectorAll('.record-checkbox');
+            selectAll.checked = allCheckboxes.length > 0 && checkboxes.length === allCheckboxes.length;
+        }
+        
+        function deleteSelectedRecords() {
+            const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+            if (checkboxes.length === 0) return;
+            
+            const recordIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (!confirm(`Are you sure you want to delete ${recordIds.length} record(s)?`)) {
+                return;
+            }
+            
+            console.log('🗑️ Deleting records:', recordIds);
+            
+            // Get all records
+            const allRecords = getFromStorage('harvestRecords', []);
+            console.log('📊 Total records before delete:', allRecords.length);
+            
+            // Find records to delete
+            const recordsToDelete = allRecords.filter(record => recordIds.includes(String(record.id)));
+            console.log('🎯 Records to delete:', recordsToDelete.length);
+            
+            // Delete from Firestore
+            let deleteCount = 0;
+            const deletePromises = recordsToDelete.map(record => {
+                if (record.firestoreId) {
+                    console.log('Deleting from Firestore:', record.firestoreId);
+                    
+                    // Try both old and new collections
+                    const collection = currentFruit ? `${currentFruit}_harvestRecords` : 'harvestRecords';
+                    
+                    return db.collection(collection).doc(record.firestoreId).delete()
+                        .then(() => {
+                            deleteCount++;
+                            console.log('✅ Deleted from', collection);
+                        })
+                        .catch((error) => {
+                            // If not found in fruit collection, try old collection
+                            if (currentFruit) {
+                                return db.collection('harvestRecords').doc(record.firestoreId).delete()
+                                    .then(() => {
+                                        deleteCount++;
+                                        console.log('✅ Deleted from harvestRecords');
+                                    })
+                                    .catch((err) => {
+                                        console.error('❌ Failed to delete:', err);
+                                    });
+                            } else {
+                                console.error('❌ Failed to delete:', error);
+                            }
+                        });
+                } else {
+                    console.warn('⚠️ Record has no firestoreId:', record.id);
+                    return Promise.resolve();
+                }
+            });
+            
+            Promise.all(deletePromises).then(() => {
+                showToast(`Deleted ${deleteCount} record(s)`);
+                
+                // Uncheck select all
+                document.getElementById('selectAll').checked = false;
+                
+                // Records will auto-update via Firebase listener
+                // But force a refresh just in case
+                setTimeout(() => {
+                    updateRecordsDisplay();
+                }, 500);
+            });
         }
         
 
