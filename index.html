@@ -807,6 +807,11 @@
         <h2 style="margin-bottom: 20px;">Manual Entry</h2>
         
         <div class="form-group">
+            <label for="manualDate">Date *</label>
+            <input type="date" id="manualDate" required>
+        </div>
+        
+        <div class="form-group">
             <label for="manualPicker">Picker *</label>
             <select id="manualPicker" required>
                 <option value="">Select Picker</option>
@@ -827,6 +832,15 @@
             <label for="manualSize">Size *</label>
             <select id="manualSize" required onchange="toggleManualEntryFields()">
                 <option value="">Select Size</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="manualGrade">Grade *</label>
+            <select id="manualGrade" required>
+                <option value="">Select Grade</option>
+                <option value="First">First</option>
+                <option value="Second">Second</option>
             </select>
         </div>
         
@@ -1027,16 +1041,17 @@
         
         <!-- Date Filter -->
         <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <select id="dateFilterType" onchange="toggleDateFilter()" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
+            <select id="dateFilterType" onchange="toggleDateFilter(); applyFilters();" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
+                <option value="all">All Records</option>
                 <option value="today">Today</option>
                 <option value="range">Date Range</option>
             </select>
-            <div id="dateRangeInputs" style="display: none; gap: 10px;">
+            <div id="dateRangeInputs" style="display: none; gap: 10px; align-items: center;">
                 <input type="date" id="filterDateFrom" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px;">
                 <span style="padding: 5px;">to</span>
                 <input type="date" id="filterDateTo" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px;">
+                <button class="btn btn-primary" onclick="applyFilters()" style="padding: 10px 20px;">Apply</button>
             </div>
-            <button class="btn btn-primary" onclick="applyFilters()" style="padding: 10px 20px;">Apply</button>
         </div>
         
         <!-- KPI Tiles -->
@@ -1152,88 +1167,6 @@
         <div class="btn-group">
             <button class="btn btn-success" onclick="saveDataSettings()">💾 Save Settings</button>
         </div>
-        
-        <div class="summary-card" id="kgPerPlantSummary" style="display: none;">
-            <h3 style="margin-bottom: 15px;">Kg/Plant per Block</h3>
-            <div id="kgPerPlantContent">
-                <!-- Will be populated with calculations -->
-            </div>
-        </div>
-    </div>
-    
-    <!-- Settings Menu Screen (removed, no longer needed) -->
-    <div class="screen" id="settingsMenuScreen" style="display: none;">
-    </div>
-    
-    <!-- Picking Settings Screen (removed) -->
-    <div class="screen" id="pickingSettingsScreen" style="display: none;">
-    </div>
-    
-    <!-- Employee Settings Screen (removed) -->
-    <div class="screen" id="employeeSettingsScreen" style="display: none;">
-        
-                        <tr>
-                            <td>Small</td>
-                            <td><input type="number" id="smallPunnets" value="32" min="1"></td>
-                            <td><input type="number" id="smallWeight" value="250" min="1"></td>
-                        </tr>
-                        <tr>
-                            <td>Medium</td>
-                            <td><input type="number" id="mediumPunnets" value="20" min="1"></td>
-                            <td><input type="number" id="mediumWeight" value="400" min="1"></td>
-                        </tr>
-                        <tr>
-                            <td>Large</td>
-                            <td><input type="number" id="largePunnets" value="8" min="1"></td>
-                            <td><input type="number" id="largeWeight" value="800" min="1"></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <div class="settings-section">
-            <h3>Master Lists</h3>
-            <div class="form-group">
-                <label for="varietiesList">Varieties (one per line or comma-separated)</label>
-                <textarea id="varietiesList" rows="4">Albion
-Camarosa
-Ventana</textarea>
-            </div>
-            <div class="form-group">
-                <label for="blocksList">Blocks (one per line or comma-separated)</label>
-                <textarea id="blocksList" rows="4">Block A
-Block B
-Block C</textarea>
-            </div>
-        </div>
-        
-        <div class="btn-group">
-            <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
-        </div>
-    </div>
-    
-    <!-- Employee Settings Screen -->
-    <div class="screen" id="employeeSettingsScreen">
-        <div class="settings-section">
-            <h3>Employee Settings</h3>
-            <p style="color: #666;">Employee configuration options coming soon...</p>
-        </div>
-    </div>
-    
-    <!-- Data Settings Screen -->
-    <div class="screen" id="dataSettingsScreen">
-        <div class="settings-section">
-            <h3>Data Settings</h3>
-            <div class="form-group">
-                <label for="plantsPerBlock">Plants per Block</label>
-                <input type="number" id="plantsPerBlock" min="1" value="1000" placeholder="Enter number of plants">
-            </div>
-        </div>
-        
-        <div class="btn-group">
-            <button class="btn btn-primary" onclick="saveDataSettings()">💾 Save Settings</button>
-        </div>
     </div>
     
     <!-- Toast notification -->
@@ -1287,6 +1220,22 @@ Block C</textarea>
         let clockAction = null;
         let clockPhoto = null;
         
+        // Records filtering and sorting
+        let currentFilters = {
+            dateType: 'all',
+            dateFrom: null,
+            dateTo: null,
+            variety: '',
+            block: '',
+            size: '',
+            grade: '',
+            picker: ''
+        };
+        let currentSort = {
+            column: 'timestamp',
+            direction: 'desc'
+        };
+        
         // Firebase cache
         window.firebaseCache = {};
         
@@ -1301,6 +1250,17 @@ Block C</textarea>
         // Size configurations
         const sizes = ['Small', 'Medium', 'Large', 'Seconds', 'Frozen'];
         const grades = ['First', 'Second'];
+        
+        // Default punnet settings
+        function getDefaultPunnetSettings() {
+            return {
+                'Small': { grade: 'First', punnetsPerCrate: 20, punnetWeightG: 350 },
+                'Medium': { grade: 'First', punnetsPerCrate: 20, punnetWeightG: 400 },
+                'Large': { grade: 'First', punnetsPerCrate: 20, punnetWeightG: 450 },
+                'Seconds': { grade: 'Second', punnetsPerCrate: 20, punnetWeightG: 400 },
+                'Frozen': { grade: 'First', punnetsPerCrate: 0, punnetWeightG: 0 }
+            };
+        }
         
         // ============= TIMEZONE UTILITIES =============
         function getNZDateTime() {
@@ -1551,8 +1511,12 @@ Block C</textarea>
                 }
             }
             
+            // Fruit-specific keys
+            const fruitSpecificKeys = ['harvestRecords', 'varieties', 'blocks', 'punnetSettings', 'plantsPerBlock', 'currentBatchId'];
+            const storageKey = (currentFruit && fruitSpecificKeys.includes(key)) ? `${currentFruit}_${key}` : key;
+            
             // For now, return from cache (will be set up by listeners)
-            const cached = window.firebaseCache?.[key];
+            const cached = window.firebaseCache?.[storageKey];
             return cached !== undefined ? cached : defaultValue;
         }
         
@@ -1562,18 +1526,26 @@ Block C</textarea>
             if (localOnlyKeys.includes(key)) {
                 try {
                     localStorage.setItem(key, JSON.stringify(value));
-                    return true;
+                    return Promise.resolve(true);
                 } catch (e) {
                     console.error('Storage write error:', e);
-                    return false;
+                    return Promise.resolve(false);
                 }
             }
+            
+            // Fruit-specific keys
+            const fruitSpecificKeys = ['harvestRecords', 'varieties', 'blocks', 'punnetSettings', 'plantsPerBlock', 'currentBatchId'];
+            const storageKey = (currentFruit && fruitSpecificKeys.includes(key)) ? `${currentFruit}_${key}` : key;
+            
+            // Update cache immediately
+            if (!window.firebaseCache) window.firebaseCache = {};
+            window.firebaseCache[storageKey] = value;
             
             // Save to Firestore
             isSyncing = true;
             showSyncStatus('Saving...');
             
-            return db.collection('settings').doc(key).set({
+            return db.collection('settings').doc(storageKey).set({
                 data: value,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             })
@@ -1592,8 +1564,12 @@ Block C</textarea>
         
         // Add a new record to Firestore
         function addRecord(collection, record) {
-            return db.collection(collection).add({
+            // Make collection fruit-specific for harvest records
+            const collectionName = (collection === 'harvestRecords' && currentFruit) ? `${currentFruit}_harvestRecords` : collection;
+            
+            return db.collection(collectionName).add({
                 ...record,
+                fruit: currentFruit,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             })
             .then(() => {
@@ -1838,6 +1814,13 @@ Block C</textarea>
         function loadManualEntryScreen() {
             if (!currentFruit) return;
             
+            // Set today's date
+            const today = new Date().toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD format
+            const dateInput = document.getElementById('manualDate');
+            if (dateInput) {
+                dateInput.value = today;
+            }
+            
             const varieties = getFromStorage('varieties', []);
             const blocks = getFromStorage('blocks', []);
             const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
@@ -1875,6 +1858,9 @@ Block C</textarea>
                     pickerSelect.innerHTML += `<option value="${emp.id}">${emp.name} (${emp.id})</option>`;
                 });
             }
+            
+            // Initialize field visibility
+            toggleManualEntryFields();
         }
         
         
@@ -1884,47 +1870,80 @@ Block C</textarea>
             const variety = document.getElementById('manualVariety').value;
             const block = document.getElementById('manualBlock').value;
             const size = document.getElementById('manualSize').value;
+            const grade = document.getElementById('manualGrade').value;
             const crates = parseInt(document.getElementById('manualCrates').value) || 0;
             const partialPunnets = parseInt(document.getElementById('manualPartialPunnets').value) || 0;
+            const weight = parseFloat(document.getElementById('manualWeight').value) || 0;
             
-            if (!date || !picker || !variety || !block || !size) {
+            if (!date || !picker || !variety || !block || !size || !grade) {
                 showToast('Please fill in all required fields');
                 return;
             }
             
-            if (crates === 0 && partialPunnets === 0) {
-                showToast('Please enter at least some crates or punnets');
-                return;
-            }
-            
-            const settings = getFromStorage('punnetSettings', {});
-            const sizeSettings = settings[size] || { punnetsPerCrate: 20, punnetWeightG: 400 };
-            
-            const fullCratePunnets = crates * sizeSettings.punnetsPerCrate;
-            const totalPunnets = fullCratePunnets + partialPunnets;
-            const totalWeightG = totalPunnets * sizeSettings.punnetWeightG;
-            const totalWeightKg = totalWeightG / 1000;
-            
+            let record;
             const batchId = getFromStorage('currentBatchId', 1);
             
-            const record = {
-                id: Date.now() + '-manual',
-                timestamp: new Date(date).toISOString(),
-                batch_id: batchId,
-                picker_id: picker,
-                crate_id: `MANUAL-${Date.now()}`,
-                variety: variety,
-                block: block,
-                size: size,
-                punnets_per_crate: sizeSettings.punnetsPerCrate,
-                punnet_weight_g: sizeSettings.punnetWeightG,
-                is_partial: partialPunnets > 0,
-                partial_punnets: partialPunnets,
-                crate_count: crates,
-                total_punnets: totalPunnets,
-                total_weight_kg: totalWeightKg,
-                scan_raw: 'MANUAL_ENTRY'
-            };
+            if (size === 'Frozen') {
+                // For frozen, use weight input directly
+                if (weight <= 0) {
+                    showToast('Please enter weight for frozen berries');
+                    return;
+                }
+                
+                record = {
+                    id: Date.now() + '-manual',
+                    timestamp: new Date(date).toISOString(),
+                    batch_id: batchId,
+                    picker_id: picker,
+                    crate_id: `MANUAL-${Date.now()}`,
+                    variety: variety,
+                    block: block,
+                    size: size,
+                    grade: grade,
+                    punnets_per_crate: 0,
+                    punnet_weight_g: 0,
+                    is_partial: false,
+                    partial_punnets: 0,
+                    crate_count: 0,
+                    total_punnets: 0,
+                    total_weight_kg: weight,
+                    scan_raw: 'MANUAL_ENTRY_FROZEN'
+                };
+            } else {
+                // For regular sizes, use crates and punnets
+                if (crates === 0 && partialPunnets === 0) {
+                    showToast('Please enter at least some crates or punnets');
+                    return;
+                }
+                
+                const settings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+                const sizeSettings = settings[size] || { punnetsPerCrate: 20, punnetWeightG: 400 };
+                
+                const fullCratePunnets = crates * sizeSettings.punnetsPerCrate;
+                const totalPunnets = fullCratePunnets + partialPunnets;
+                const totalWeightG = totalPunnets * sizeSettings.punnetWeightG;
+                const totalWeightKg = totalWeightG / 1000;
+                
+                record = {
+                    id: Date.now() + '-manual',
+                    timestamp: new Date(date).toISOString(),
+                    batch_id: batchId,
+                    picker_id: picker,
+                    crate_id: `MANUAL-${Date.now()}`,
+                    variety: variety,
+                    block: block,
+                    size: size,
+                    grade: grade,
+                    punnets_per_crate: sizeSettings.punnetsPerCrate,
+                    punnet_weight_g: sizeSettings.punnetWeightG,
+                    is_partial: partialPunnets > 0,
+                    partial_punnets: partialPunnets,
+                    crate_count: crates,
+                    total_punnets: totalPunnets,
+                    total_weight_kg: totalWeightKg,
+                    scan_raw: 'MANUAL_ENTRY'
+                };
+            }
             
             // Save to Firebase
             addRecord('harvestRecords', record).then(success => {
@@ -1932,17 +1951,40 @@ Block C</textarea>
                     // Increment batch ID
                     saveToStorage('currentBatchId', batchId + 1);
                     
-                    showToast(`Manual entry saved! ${crates} crates + ${partialPunnets} punnets`);
+                    showToast(`Manual entry saved!`);
                     
                     // Reset form
                     document.getElementById('manualPicker').value = '';
+                    document.getElementById('manualVariety').value = '';
+                    document.getElementById('manualBlock').value = '';
+                    document.getElementById('manualSize').value = '';
+                    document.getElementById('manualGrade').value = '';
                     document.getElementById('manualCrates').value = '0';
                     document.getElementById('manualPartialPunnets').value = '';
+                    document.getElementById('manualWeight').value = '';
+                    toggleManualEntryFields();
                     
                     // Navigate to records
                     navigateToScreen('recordsScreen');
                 }
             });
+        }
+        
+        function toggleManualEntryFields() {
+            const size = document.getElementById('manualSize').value;
+            const cratesGroup = document.getElementById('manualCratesGroup');
+            const partialGroup = document.getElementById('manualPartialGroup');
+            const weightGroup = document.getElementById('manualWeightGroup');
+            
+            if (size === 'Frozen') {
+                cratesGroup.style.display = 'none';
+                partialGroup.style.display = 'none';
+                weightGroup.style.display = 'block';
+            } else {
+                cratesGroup.style.display = 'block';
+                partialGroup.style.display = 'block';
+                weightGroup.style.display = 'none';
+            }
         }
         
         // ============= SCANNER FUNCTIONALITY =============
@@ -2635,7 +2677,12 @@ Block C</textarea>
                 });
             }
             
-            setTodayFilter();
+            // Set filter to "all" by default
+            const dateFilterType = document.getElementById('dateFilterType');
+            if (dateFilterType) {
+                dateFilterType.value = 'all';
+            }
+            
             updateRecordsDisplay();
         }
         
@@ -2652,7 +2699,7 @@ Block C</textarea>
         }
         
         function applyFilters() {
-            const filterType = document.getElementById('dateFilterType')?.value || 'today';
+            const filterType = document.getElementById('dateFilterType')?.value || 'all';
             
             currentFilters = {
                 dateType: filterType,
@@ -2696,6 +2743,7 @@ Block C</textarea>
                         if (recordDate > toDate) return false;
                     }
                 }
+                // If dateType is 'all', don't filter by date
                 
                 // Other filters
                 if (currentFilters.variety && record.variety !== currentFilters.variety) return false;
@@ -2976,12 +3024,10 @@ Block C</textarea>
                 div.className = 'block-settings';
                 div.innerHTML = `
                     <div class="block-settings-header">${block}</div>
-                    <input type="number" id="plants_${block}" value="${plantsPerBlock[block] || 1000}" min="0" placeholder="Number of plants">
+                    <input type="number" id="plants_${block.replace(/\s+/g, '_')}" value="${plantsPerBlock[block] || 1000}" min="0" placeholder="Number of plants">
                 `;
                 container.appendChild(div);
             });
-            
-            calculateKgPerPlant();
         }
         
         function saveDataSettings() {
@@ -2989,7 +3035,7 @@ Block C</textarea>
             const plantsPerBlock = {};
             
             blocks.forEach(block => {
-                const input = document.getElementById(`plants_${block}`);
+                const input = document.getElementById(`plants_${block.replace(/\s+/g, '_')}`);
                 if (input) {
                     plantsPerBlock[block] = parseInt(input.value) || 1000;
                 }
@@ -2997,44 +3043,7 @@ Block C</textarea>
             
             saveToStorage('plantsPerBlock', plantsPerBlock).then(() => {
                 showToast('Data settings saved!');
-                calculateKgPerPlant();
             });
-        }
-        
-        function calculateKgPerPlant() {
-            const records = getFromStorage('harvestRecords', []);
-            const plantsPerBlock = getFromStorage('plantsPerBlock', {});
-            const summaryCard = document.getElementById('kgPerPlantSummary');
-            const content = document.getElementById('kgPerPlantContent');
-            
-            if (records.length === 0) {
-                summaryCard.style.display = 'none';
-                return;
-            }
-            
-            const blockTotals = {};
-            records.forEach(record => {
-                if (!blockTotals[record.block]) {
-                    blockTotals[record.block] = 0;
-                }
-                blockTotals[record.block] += record.total_weight_kg;
-            });
-            
-            content.innerHTML = '';
-            Object.entries(blockTotals).forEach(([block, totalKg]) => {
-                const plants = plantsPerBlock[block] || 1000;
-                const kgPerPlant = totalKg / plants;
-                
-                const div = document.createElement('div');
-                div.className = 'summary-item';
-                div.innerHTML = `
-                    <span class="summary-label">${block} (${plants} plants):</span>
-                    <span class="summary-value">${kgPerPlant.toFixed(3)} kg/plant</span>
-                `;
-                content.appendChild(div);
-            });
-            
-            summaryCard.style.display = 'block';
         }
         
         // ============= UTILITIES =============
