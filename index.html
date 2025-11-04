@@ -1515,6 +1515,19 @@
             const fruitSpecificKeys = ['harvestRecords', 'varieties', 'blocks', 'punnetSettings', 'plantsPerBlock', 'currentBatchId'];
             const storageKey = (currentFruit && fruitSpecificKeys.includes(key)) ? `${currentFruit}_${key}` : key;
             
+            // For harvest records, also check for old records and merge
+            if (key === 'harvestRecords' && currentFruit) {
+                const fruitRecords = window.firebaseCache?.[storageKey] || [];
+                const oldRecords = window.firebaseCache?.['harvestRecords_OLD'] || [];
+                
+                if (oldRecords.length > 0) {
+                    console.log(`🔄 Merging ${fruitRecords.length} fruit-specific + ${oldRecords.length} old records`);
+                    return [...fruitRecords, ...oldRecords];
+                }
+                
+                return fruitRecords.length > 0 ? fruitRecords : defaultValue;
+            }
+            
             // For now, return from cache (will be set up by listeners)
             const cached = window.firebaseCache?.[storageKey];
             return cached !== undefined ? cached : defaultValue;
@@ -1760,23 +1773,17 @@
                     });
                 });
                 
+                // Store old records separately
+                window.firebaseCache['harvestRecords_OLD'] = oldRecords;
+                
                 if (oldRecords.length > 0) {
                     console.log('⚠️  Found', oldRecords.length, 'records in OLD collection');
-                    console.log('💡 Consider migrating these to fruit-specific collections');
+                    console.log('💡 These will be merged with current fruit records when displayed');
                     
-                    // Store in cache so they can be accessed
-                    window.firebaseCache['harvestRecords_OLD'] = oldRecords;
-                    
-                    // For now, merge with current fruit's records if viewing records
-                    if (currentFruit) {
-                        const fruitRecordsKey = `${currentFruit}_harvestRecords`;
-                        const currentRecords = window.firebaseCache[fruitRecordsKey] || [];
-                        window.firebaseCache[fruitRecordsKey] = [...currentRecords, ...oldRecords];
-                        
-                        const recordsScreen = document.getElementById('recordsScreen');
-                        if (recordsScreen && recordsScreen.classList.contains('active')) {
-                            updateRecordsDisplay();
-                        }
+                    // Trigger display update if on records screen
+                    const recordsScreen = document.getElementById('recordsScreen');
+                    if (recordsScreen && recordsScreen.classList.contains('active')) {
+                        updateRecordsDisplay();
                     }
                 }
             }, (error) => {
@@ -2768,32 +2775,56 @@
         
         function filterRecords(records) {
             return records.filter(record => {
-                // Date filtering
-                const recordDate = new Date(record.timestamp);
-                const recordDateStr = formatNZDate(record.timestamp);
-                
-                if (currentFilters.dateType === 'today') {
-                    const today = new Date();
-                    const todayStr = today.toLocaleDateString('en-NZ', {
-                        timeZone: 'Pacific/Auckland',
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric'
-                    });
-                    if (recordDateStr !== todayStr) return false;
-                } else if (currentFilters.dateType === 'range') {
-                    if (currentFilters.dateFrom) {
-                        const fromDate = new Date(currentFilters.dateFrom);
-                        fromDate.setHours(0, 0, 0, 0);
-                        if (recordDate < fromDate) return false;
-                    }
-                    if (currentFilters.dateTo) {
-                        const toDate = new Date(currentFilters.dateTo);
-                        toDate.setHours(23, 59, 59, 999);
-                        if (recordDate > toDate) return false;
-                    }
+                // Skip records without timestamp
+                if (!record.timestamp) {
+                    console.warn('Record missing timestamp:', record);
+                    return false;
                 }
-                // If dateType is 'all', don't filter by date
+                
+                // Date filtering
+                try {
+                    const recordDate = new Date(record.timestamp);
+                    
+                    // Check if date is valid
+                    if (isNaN(recordDate.getTime())) {
+                        console.warn('Invalid date for record:', record.timestamp);
+                        return false;
+                    }
+                    
+                    const recordDateStr = formatNZDate(record.timestamp);
+                    
+                    if (currentFilters.dateType === 'today') {
+                        const today = new Date();
+                        const todayStr = today.toLocaleDateString('en-NZ', {
+                            timeZone: 'Pacific/Auckland',
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                        });
+                        if (recordDateStr !== todayStr) return false;
+                    } else if (currentFilters.dateType === 'range') {
+                        if (currentFilters.dateFrom) {
+                            const fromDate = new Date(currentFilters.dateFrom);
+                            fromDate.setHours(0, 0, 0, 0);
+                            if (recordDate < fromDate) {
+                                console.log('Record filtered (before start date):', recordDate, '<', fromDate);
+                                return false;
+                            }
+                        }
+                        if (currentFilters.dateTo) {
+                            const toDate = new Date(currentFilters.dateTo);
+                            toDate.setHours(23, 59, 59, 999);
+                            if (recordDate > toDate) {
+                                console.log('Record filtered (after end date):', recordDate, '>', toDate);
+                                return false;
+                            }
+                        }
+                    }
+                    // If dateType is 'all', don't filter by date
+                } catch (error) {
+                    console.error('Date filtering error:', error, record);
+                    return false;
+                }
                 
                 // Other filters - only filter if record HAS the field AND filter is set
                 if (currentFilters.variety && record.variety && record.variety !== currentFilters.variety) return false;
