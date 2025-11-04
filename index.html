@@ -1639,100 +1639,151 @@
         window.firebaseCache = {};
         
         function initializeStorage() {
-            // Set up real-time listeners for each collection/document
+            console.log('🔥 Initializing Firebase listeners...');
             
-            // Listen to settings
-            const settingsKeys = [
-                'punnetSettings',
-                'varieties', 
-                'blocks',
-                'currentBatchId',
-                'employees',
-                'plantsPerBlock'
-            ];
+            // Listen to shared employees collection
+            db.collection('settings').doc('employees').onSnapshot((doc) => {
+                if (doc.exists) {
+                    window.firebaseCache['employees'] = doc.data().data;
+                    console.log(`✅ employees synced:`, doc.data().data?.length || 0, 'employees');
+                    
+                    // Update employee-related screens if active
+                    const currentScreenId = document.querySelector('.screen.active')?.id;
+                    if (currentScreenId === 'clockInScreen') {
+                        loadClockInScreen();
+                    } else if (currentScreenId === 'clockOutScreen') {
+                        loadClockOutScreen();
+                    } else if (currentScreenId === 'printStickersScreen') {
+                        loadPrintStickersScreen();
+                    } else if (currentScreenId === 'manualEntryScreen') {
+                        loadManualEntryScreen();
+                    }
+                } else {
+                    window.firebaseCache['employees'] = [];
+                    saveToStorage('employees', []);
+                }
+            }, (error) => {
+                console.error('❌ Employees listener error:', error);
+            });
             
-            settingsKeys.forEach(key => {
-                db.collection('settings').doc(key).onSnapshot((doc) => {
-                    if (doc.exists) {
-                        window.firebaseCache[key] = doc.data().data;
-                        console.log(`✅ ${key} synced:`, doc.data().data);
-                        
-                        // If employees updated and we're on an employee screen, reload
-                        if (key === 'employees') {
-                            const currentScreenId = document.querySelector('.screen.active')?.id;
-                            if (currentScreenId === 'clockInScreen') {
-                                loadClockInScreen();
-                            } else if (currentScreenId === 'clockOutScreen') {
-                                loadClockOutScreen();
-                            } else if (currentScreenId === 'printStickersScreen') {
-                                loadPrintStickersScreen();
-                            } else if (currentScreenId === 'manualEntryScreen') {
-                                loadManualEntryScreen();
+            // Listen to fruit-specific settings for all fruits
+            const fruits = ['strawberries', 'raspberries', 'boysenberries', 'karakaBerries'];
+            const fruitKeys = ['varieties', 'blocks', 'punnetSettings', 'plantsPerBlock', 'currentBatchId'];
+            
+            fruits.forEach(fruit => {
+                fruitKeys.forEach(key => {
+                    const docKey = `${fruit}_${key}`;
+                    db.collection('settings').doc(docKey).onSnapshot((doc) => {
+                        if (doc.exists) {
+                            window.firebaseCache[docKey] = doc.data().data;
+                            console.log(`✅ ${docKey} synced`);
+                            
+                            // Reload current screen if it's affected
+                            if (currentFruit === fruit) {
+                                const currentScreenId = document.querySelector('.screen.active')?.id;
+                                if (currentScreenId === 'settingsScreen') {
+                                    loadSettingsScreen();
+                                } else if (currentScreenId === 'dataSettingsScreen') {
+                                    loadDataSettingsScreen();
+                                } else if (currentScreenId === 'manualEntryScreen') {
+                                    loadManualEntryScreen();
+                                } else if (currentScreenId === 'recordsScreen') {
+                                    loadRecordsScreen();
+                                }
+                            }
+                        } else {
+                            // Initialize with defaults
+                            let defaultValue;
+                            switch(key) {
+                                case 'punnetSettings':
+                                    defaultValue = getDefaultPunnetSettings();
+                                    break;
+                                case 'varieties':
+                                    defaultValue = [];
+                                    break;
+                                case 'blocks':
+                                    defaultValue = [];
+                                    break;
+                                case 'currentBatchId':
+                                    defaultValue = 1;
+                                    break;
+                                case 'plantsPerBlock':
+                                    defaultValue = {};
+                                    break;
+                                default:
+                                    defaultValue = null;
+                            }
+                            
+                            if (defaultValue !== null) {
+                                window.firebaseCache[docKey] = defaultValue;
                             }
                         }
-                    } else {
-                        // Initialize with defaults
-                        let defaultValue;
-                        switch(key) {
-                            case 'punnetSettings':
-                                defaultValue = {
-                                    'Small': { punnetsPerCrate: 32, punnetWeightG: 250 },
-                                    'Medium': { punnetsPerCrate: 20, punnetWeightG: 400 },
-                                    'Large': { punnetsPerCrate: 8, punnetWeightG: 800 }
-                                };
-                                break;
-                            case 'varieties':
-                                defaultValue = ['Albion', 'Camarosa', 'Ventana'];
-                                break;
-                            case 'blocks':
-                                defaultValue = ['Block A', 'Block B', 'Block C'];
-                                break;
-                            case 'currentBatchId':
-                                defaultValue = 1;
-                                break;
-                            case 'employees':
-                                defaultValue = [];
-                                break;
-                            case 'plantsPerBlock':
-                                defaultValue = 1000;
-                                break;
-                            default:
-                                defaultValue = null;
-                        }
-                        
-                        if (defaultValue !== null) {
-                            window.firebaseCache[key] = defaultValue;
-                            saveToStorage(key, defaultValue);
+                    }, (error) => {
+                        console.error(`❌ ${docKey} listener error:`, error);
+                    });
+                });
+                
+                // Listen to fruit-specific harvest records
+                const fruitRecordsKey = `${fruit}_harvestRecords`;
+                db.collection(fruitRecordsKey).onSnapshot((snapshot) => {
+                    const records = [];
+                    snapshot.forEach((doc) => {
+                        records.push({
+                            firestoreId: doc.id,
+                            ...doc.data()
+                        });
+                    });
+                    window.firebaseCache[fruitRecordsKey] = records;
+                    
+                    console.log(`📊 ${fruit} records updated:`, records.length, 'records');
+                    
+                    // Update display if on records screen for this fruit
+                    if (currentFruit === fruit) {
+                        const recordsScreen = document.getElementById('recordsScreen');
+                        if (recordsScreen && recordsScreen.classList.contains('active')) {
+                            updateRecordsDisplay();
                         }
                     }
                 }, (error) => {
-                    console.error('Listener error:', error);
+                    console.error(`❌ ${fruit} records listener error:`, error);
                 });
             });
             
-            // Listen to harvest records
+            // BACKWARD COMPATIBILITY: Listen to OLD harvestRecords collection
+            // This ensures old records still display
             db.collection('harvestRecords').onSnapshot((snapshot) => {
-                const records = [];
+                const oldRecords = [];
                 snapshot.forEach((doc) => {
-                    records.push({
+                    oldRecords.push({
                         firestoreId: doc.id,
                         ...doc.data()
                     });
                 });
-                window.firebaseCache['harvestRecords'] = records;
                 
-                console.log('📊 Records updated:', records.length);
-                
-                // Update display if on records screen
-                const recordsScreen = document.getElementById('recordsScreen');
-                if (recordsScreen && recordsScreen.classList.contains('active')) {
-                    updateRecordsDisplay();
+                if (oldRecords.length > 0) {
+                    console.log('⚠️  Found', oldRecords.length, 'records in OLD collection');
+                    console.log('💡 Consider migrating these to fruit-specific collections');
+                    
+                    // Store in cache so they can be accessed
+                    window.firebaseCache['harvestRecords_OLD'] = oldRecords;
+                    
+                    // For now, merge with current fruit's records if viewing records
+                    if (currentFruit) {
+                        const fruitRecordsKey = `${currentFruit}_harvestRecords`;
+                        const currentRecords = window.firebaseCache[fruitRecordsKey] || [];
+                        window.firebaseCache[fruitRecordsKey] = [...currentRecords, ...oldRecords];
+                        
+                        const recordsScreen = document.getElementById('recordsScreen');
+                        if (recordsScreen && recordsScreen.classList.contains('active')) {
+                            updateRecordsDisplay();
+                        }
+                    }
                 }
             }, (error) => {
-                console.error('Records listener error:', error);
+                console.error('❌ Old records listener error:', error);
             });
             
-            // Listen to time records
+            // Listen to time records (shared across all fruits)
             db.collection('timeRecords').onSnapshot((snapshot) => {
                 const records = [];
                 snapshot.forEach((doc) => {
@@ -1743,19 +1794,18 @@
                 });
                 window.firebaseCache['timeRecords'] = records;
                 
+                console.log('⏰ Time records updated:', records.length);
+                
                 // Update display if on time records screen
                 const timeScreen = document.getElementById('timeRecordsScreen');
                 if (timeScreen && timeScreen.classList.contains('active')) {
                     loadTimeRecords();
                 }
             }, (error) => {
-                console.error('Time records listener error:', error);
+                console.error('❌ Time records listener error:', error);
             });
             
-            // Initialize local-only settings
-            if (!localStorage.getItem('scanContext')) {
-                localStorage.setItem('scanContext', JSON.stringify({}));
-            }
+            console.log('✅ All Firebase listeners initialized');
         }
         
         // ============= STRAWBERRY SCAN SCREEN =============
@@ -2745,12 +2795,13 @@
                 }
                 // If dateType is 'all', don't filter by date
                 
-                // Other filters
-                if (currentFilters.variety && record.variety !== currentFilters.variety) return false;
-                if (currentFilters.block && record.block !== currentFilters.block) return false;
-                if (currentFilters.size && record.size !== currentFilters.size) return false;
-                if (currentFilters.grade && record.grade !== currentFilters.grade) return false;
-                if (currentFilters.picker && !record.picker_id.toLowerCase().includes(currentFilters.picker)) return false;
+                // Other filters - only filter if record HAS the field AND filter is set
+                if (currentFilters.variety && record.variety && record.variety !== currentFilters.variety) return false;
+                if (currentFilters.block && record.block && record.block !== currentFilters.block) return false;
+                if (currentFilters.size && record.size && record.size !== currentFilters.size) return false;
+                // Grade filter: only filter out if record HAS a grade and it doesn't match
+                if (currentFilters.grade && record.grade && record.grade !== currentFilters.grade) return false;
+                if (currentFilters.picker && record.picker_id && !record.picker_id.toLowerCase().includes(currentFilters.picker)) return false;
                 
                 return true;
             });
@@ -2759,7 +2810,14 @@
         
         function updateRecordsDisplay() {
             const records = getFromStorage('harvestRecords', []);
+            console.log('📊 Displaying records:', {
+                currentFruit: currentFruit,
+                totalRecords: records.length,
+                filters: currentFilters
+            });
+            
             const filtered = filterRecords(records);
+            console.log('🔍 After filtering:', filtered.length, 'records');
             
             filtered.sort((a, b) => {
                 let aVal = a[currentSort.column];
@@ -2789,15 +2847,15 @@
                     const row = tbody.insertRow();
                     row.innerHTML = `
                         <td>${formatNZDateTime(record.timestamp)}</td>
-                        <td>${record.batch_id}</td>
-                        <td>${record.picker_id}</td>
-                        <td>${record.crate_id}</td>
-                        <td>${record.variety}</td>
-                        <td>${record.block}</td>
-                        <td>${record.size}</td>
-                        <td>${record.grade}</td>
-                        <td>${record.total_punnets}</td>
-                        <td>${record.total_weight_kg.toFixed(2)}</td>
+                        <td>${record.batch_id || 'N/A'}</td>
+                        <td>${record.picker_id || 'N/A'}</td>
+                        <td>${record.crate_id || 'N/A'}</td>
+                        <td>${record.variety || 'N/A'}</td>
+                        <td>${record.block || 'N/A'}</td>
+                        <td>${record.size || 'N/A'}</td>
+                        <td>${record.grade || '-'}</td>
+                        <td>${record.total_punnets || 0}</td>
+                        <td>${(record.total_weight_kg || 0).toFixed(2)}</td>
                         <td class="${record.is_partial ? 'partial' : ''}">${record.is_partial ? 'Yes' : 'No'}</td>
                     `;
                 });
