@@ -3251,14 +3251,31 @@
             Promise.all(deletePromises).then(() => {
                 showToast(`Deleted ${deleteCount} record(s)`);
                 
+                // UPDATE LOCAL CACHE IMMEDIATELY
+                // Remove deleted records from fruit-specific cache
+                if (currentFruit) {
+                    const fruitKey = `${currentFruit}_harvestRecords`;
+                    if (window.firebaseCache[fruitKey]) {
+                        window.firebaseCache[fruitKey] = window.firebaseCache[fruitKey].filter(
+                            record => !recordIds.includes(String(record.id))
+                        );
+                        console.log('🔄 Updated fruit cache:', window.firebaseCache[fruitKey].length, 'records remaining');
+                    }
+                }
+                
+                // Remove deleted records from old cache
+                if (window.firebaseCache['harvestRecords_OLD']) {
+                    window.firebaseCache['harvestRecords_OLD'] = window.firebaseCache['harvestRecords_OLD'].filter(
+                        record => !recordIds.includes(String(record.id))
+                    );
+                    console.log('🔄 Updated old cache:', window.firebaseCache['harvestRecords_OLD'].length, 'records remaining');
+                }
+                
                 // Uncheck select all
                 document.getElementById('selectAll').checked = false;
                 
-                // Records will auto-update via Firebase listener
-                // But force a refresh just in case
-                setTimeout(() => {
-                    updateRecordsDisplay();
-                }, 500);
+                // Force immediate display update
+                updateRecordsDisplay();
             });
         }
         
