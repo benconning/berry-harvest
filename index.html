@@ -895,6 +895,10 @@
                 <div class="emoji">➕</div>
                 <div>Enrol New Employee</div>
             </div>
+            <div class="tile" onclick="navigateToScreen('employeeListScreen')">
+                <div class="emoji">📋</div>
+                <div>Employee List</div>
+            </div>
             <div class="tile" onclick="navigateToScreen('clockInOutMenuScreen')">
                 <div class="emoji">⏰</div>
                 <div>Clock In/Out</div>
@@ -906,6 +910,52 @@
             <div class="tile" onclick="navigateToScreen('timeRecordsScreen')">
                 <div class="emoji">📋</div>
                 <div>View Time Records</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Employee List Screen -->
+    <div class="screen" id="employeeListScreen">
+        <h2 style="margin-bottom: 20px;">Employee List</h2>
+        
+        <div style="margin-bottom: 20px;">
+            <label for="employeeStatusFilter" style="margin-right: 10px; font-weight: 600;">Filter:</label>
+            <select id="employeeStatusFilter" onchange="loadEmployeeList()" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
+                <option value="all">All Employees</option>
+                <option value="current" selected>Current</option>
+                <option value="non-current">Non-Current</option>
+            </select>
+        </div>
+        
+        <div id="employeeListContainer">
+            <!-- Will be populated dynamically -->
+        </div>
+    </div>
+    
+    <!-- Employee Edit Modal -->
+    <div class="modal" id="employeeEditModal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">Edit Employee</div>
+            <div style="padding: 20px;">
+                <input type="hidden" id="editEmployeeId" value="">
+                
+                <div class="form-group">
+                    <label for="editEmployeeName">Name *</label>
+                    <input type="text" id="editEmployeeName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Status</label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="editEmployeeActive" checked>
+                        <label for="editEmployeeActive" style="margin: 0;">Current Employee</label>
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="saveEmployeeEdit()">💾 Save Changes</button>
+                    <button class="btn" onclick="closeEmployeeEditModal()">✕ Cancel</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1132,32 +1182,102 @@
         <h2 style="margin-bottom: 20px;">Fruit Settings</h2>
         
         <h3 style="margin: 20px 0 10px;">Punnet Settings</h3>
-        <table class="settings-table" style="width: 100%; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
-            <thead>
-                <tr>
-                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #eee; background: #f8f9fa; font-weight: 600;">Size</th>
-                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #eee; background: #f8f9fa; font-weight: 600;">Grade</th>
-                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #eee; background: #f8f9fa; font-weight: 600;">Punnets/Crate</th>
-                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #eee; background: #f8f9fa; font-weight: 600;">Weight (g)</th>
-                </tr>
-            </thead>
-            <tbody id="punnetSettingsBody">
-                <!-- Will be populated dynamically -->
-            </tbody>
-        </table>
+        <button class="btn btn-primary" onclick="openAddPunnetForm()" style="margin-bottom: 15px;">➕ Add New Size</button>
+        
+        <div id="punnetSettingsList" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+            <!-- Will be populated dynamically -->
+        </div>
         
         <h3 style="margin: 20px 0 10px;">Varieties</h3>
-        <div class="form-group">
-            <textarea id="varietiesList" placeholder="Enter varieties, one per line" style="min-height: 120px;"></textarea>
+        <button class="btn btn-primary" onclick="openAddVarietyForm()" style="margin-bottom: 15px;">➕ Add New Variety</button>
+        
+        <div id="varietiesList" style="background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+            <!-- Will be populated dynamically -->
         </div>
         
         <h3 style="margin: 20px 0 10px;">Blocks</h3>
-        <div class="form-group">
-            <textarea id="blocksList" placeholder="Enter blocks, one per line" style="min-height: 120px;"></textarea>
-        </div>
+        <button class="btn btn-primary" onclick="openAddBlockForm()" style="margin-bottom: 15px;">➕ Add New Block</button>
         
-        <div class="btn-group">
-            <button class="btn btn-success" onclick="saveSettings()">💾 Save Settings</button>
+        <div id="blocksList" style="background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+            <!-- Will be populated dynamically -->
+        </div>
+    </div>
+    
+    <!-- Punnet Settings Form Modal -->
+    <div class="modal" id="punnetFormModal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header" id="punnetFormTitle">Add Punnet Size</div>
+            <div style="padding: 20px;">
+                <input type="hidden" id="punnetFormIndex" value="">
+                
+                <div class="form-group">
+                    <label for="punnetFormSize">Size Name *</label>
+                    <input type="text" id="punnetFormSize" placeholder="e.g., Small, Medium, Extra Large" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="punnetFormGrade">Grade *</label>
+                    <select id="punnetFormGrade" required>
+                        <option value="First">First</option>
+                        <option value="Second">Second</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="punnetFormPunnets">Punnets per Crate *</label>
+                    <input type="number" id="punnetFormPunnets" min="0" placeholder="e.g., 20" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="punnetFormWeight">Weight per Punnet (g) *</label>
+                    <input type="number" id="punnetFormWeight" min="0" placeholder="e.g., 400" required>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="savePunnetForm()">💾 Save</button>
+                    <button class="btn" onclick="closePunnetForm()">✕ Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Variety Form Modal -->
+    <div class="modal" id="varietyFormModal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header" id="varietyFormTitle">Add Variety</div>
+            <div style="padding: 20px;">
+                <input type="hidden" id="varietyFormIndex" value="">
+                
+                <div class="form-group">
+                    <label for="varietyFormName">Variety Name *</label>
+                    <input type="text" id="varietyFormName" placeholder="e.g., Albion, Monterey" required>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="saveVarietyForm()">💾 Save</button>
+                    <button class="btn" onclick="closeVarietyForm()">✕ Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Block Form Modal -->
+    <div class="modal" id="blockFormModal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header" id="blockFormTitle">Add Block</div>
+            <div style="padding: 20px;">
+                <input type="hidden" id="blockFormIndex" value="">
+                
+                <div class="form-group">
+                    <label for="blockFormName">Block Name *</label>
+                    <input type="text" id="blockFormName" placeholder="e.g., Block 1, Berrylands" required>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="saveBlockForm()">💾 Save</button>
+                    <button class="btn" onclick="closeBlockForm()">✕ Cancel</button>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -1392,6 +1512,7 @@
                 'dataSettingsScreen': 'Data Settings',
                 'employeeMenuScreen': 'Employees',
                 'enrollEmployeeScreen': 'Enrol Employee',
+                'employeeListScreen': 'Employee List',
                 'clockInOutMenuScreen': 'Clock In/Out',
                 'clockInScreen': 'Clock In',
                 'clockOutScreen': 'Clock Out',
@@ -1433,8 +1554,6 @@
                 case 'scanScreen':
                     loadScanScreen();
                     break;
-                    loadStrawberryScreen();
-                    break;
                 case 'manualEntryScreen':
                     loadManualEntryScreen();
                     break;
@@ -1459,14 +1578,8 @@
                 case 'timeRecordsScreen':
                     loadTimeRecords();
                     break;
-                case 'recordsScreen':
-                    loadRecordsScreen();
-                    break;
-                case 'pickingSettingsScreen':
-                    loadPickingSettings();
-                    break;
-                case 'dataSettingsScreen':
-                    loadDataSettings();
+                case 'employeeListScreen':
+                    loadEmployeeList();
                     break;
             }
         }
@@ -1884,40 +1997,58 @@
                 dateInput.value = today;
             }
             
-            const varieties = getFromStorage('varieties', []);
-            const blocks = getFromStorage('blocks', []);
+            const varietiesData = getFromStorage('varieties', []);
+            const blocksData = getFromStorage('blocks', []);
             const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
-            const employees = getFromStorage('employees', []);
+            const employeesData = getFromStorage('employees', []);
+            
+            // Filter only ACTIVE varieties
+            const activeVarieties = varietiesData.filter(v => {
+                const isActive = (typeof v === 'string') ? true : (v.active !== false);
+                return isActive;
+            }).map(v => typeof v === 'string' ? v : v.name);
             
             const varietySelect = document.getElementById('manualVariety');
             if (varietySelect) {
                 varietySelect.innerHTML = '<option value="">Select Variety</option>';
-                varieties.forEach(v => {
+                activeVarieties.forEach(v => {
                     varietySelect.innerHTML += `<option value="${v}">${v}</option>`;
                 });
             }
             
+            // Filter only ACTIVE blocks
+            const activeBlocks = blocksData.filter(b => {
+                const isActive = (typeof b === 'string') ? true : (b.active !== false);
+                return isActive;
+            }).map(b => typeof b === 'string' ? b : b.name);
+            
             const blockSelect = document.getElementById('manualBlock');
             if (blockSelect) {
                 blockSelect.innerHTML = '<option value="">Select Block</option>';
-                blocks.forEach(b => {
+                activeBlocks.forEach(b => {
                     blockSelect.innerHTML += `<option value="${b}">${b}</option>`;
                 });
             }
             
+            // Filter only ACTIVE punnet sizes
             const sizeSelect = document.getElementById('manualSize');
             if (sizeSelect) {
                 sizeSelect.innerHTML = '<option value="">Select Size</option>';
-                Object.keys(punnetSettings).forEach(s => {
-                    sizeSelect.innerHTML += `<option value="${s}">${s}</option>`;
+                Object.entries(punnetSettings).forEach(([size, settings]) => {
+                    const isActive = settings.active !== false;
+                    if (isActive) {
+                        sizeSelect.innerHTML += `<option value="${size}">${size}</option>`;
+                    }
                 });
             }
             
-            // Populate picker dropdown with employees
+            // Filter only ACTIVE (current) employees
+            const activeEmployees = employeesData.filter(emp => emp.active !== false);
+            
             const pickerSelect = document.getElementById('manualPicker');
             if (pickerSelect && pickerSelect.tagName === 'SELECT') {
                 pickerSelect.innerHTML = '<option value="">Select Picker</option>';
-                employees.forEach(emp => {
+                activeEmployees.forEach(emp => {
                     pickerSelect.innerHTML += `<option value="${emp.id}">${emp.name} (${emp.id})</option>`;
                 });
             }
@@ -2371,6 +2502,8 @@
             }
             
             const employees = getFromStorage('employees', []);
+            // Set new employee as active by default
+            window.tempEmployee.active = true;
             employees.push(window.tempEmployee);
             saveToStorage('employees', employees).then(() => {
                 showToast('Employee enrolled successfully!');
@@ -2385,14 +2518,117 @@
             });
         }
         
-        function loadClockInScreen() {
+        // ============= EMPLOYEE LIST =============
+        function loadEmployeeList() {
             const employees = getFromStorage('employees', []);
+            const filter = document.getElementById('employeeStatusFilter').value;
+            const container = document.getElementById('employeeListContainer');
+            
+            container.innerHTML = '';
+            
+            // Filter employees based on status
+            const filteredEmployees = employees.filter(emp => {
+                const isActive = emp.active !== false; // Default to true if not set
+                if (filter === 'current') return isActive;
+                if (filter === 'non-current') return !isActive;
+                return true; // 'all'
+            });
+            
+            if (filteredEmployees.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No employees found</p>';
+                return;
+            }
+            
+            filteredEmployees.forEach((emp, index) => {
+                const isActive = emp.active !== false;
+                const actualIndex = employees.findIndex(e => e.id === emp.id);
+                
+                const card = document.createElement('div');
+                card.style.cssText = 'background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;';
+                
+                card.innerHTML = `
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 10px 0;">${emp.name}</h3>
+                        <div style="color: #666; font-size: 14px;">
+                            <div>ID: ${emp.id}</div>
+                            ${emp.phone ? `<div>Phone: ${emp.phone}</div>` : ''}
+                            ${emp.email ? `<div>Email: ${emp.email}</div>` : ''}
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <span style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; ${isActive ? 'background: #d4edda; color: #155724;' : 'background: #f8d7da; color: #721c24;'}">
+                                ${isActive ? '✓ Current' : '✗ Non-Current'}
+                            </span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleEmployeeActive(${actualIndex}, this.checked)">
+                            <span>Current</span>
+                        </label>
+                        <button class="btn btn-primary" onclick="openEmployeeEditModal(${actualIndex})" style="padding: 8px 15px;">✏️ Edit</button>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+        
+        function openEmployeeEditModal(index) {
+            const employees = getFromStorage('employees', []);
+            const emp = employees[index];
+            
+            document.getElementById('editEmployeeId').value = index;
+            document.getElementById('editEmployeeName').value = emp.name;
+            document.getElementById('editEmployeeActive').checked = emp.active !== false;
+            
+            document.getElementById('employeeEditModal').style.display = 'flex';
+        }
+        
+        function saveEmployeeEdit() {
+            const index = parseInt(document.getElementById('editEmployeeId').value);
+            const name = document.getElementById('editEmployeeName').value.trim();
+            const isActive = document.getElementById('editEmployeeActive').checked;
+            
+            if (!name) {
+                showToast('Please enter an employee name');
+                return;
+            }
+            
+            const employees = getFromStorage('employees', []);
+            employees[index].name = name;
+            employees[index].active = isActive;
+            
+            saveToStorage('employees', employees).then(() => {
+                showToast('Employee updated!');
+                closeEmployeeEditModal();
+                loadEmployeeList();
+            });
+        }
+        
+        function closeEmployeeEditModal() {
+            document.getElementById('employeeEditModal').style.display = 'none';
+        }
+        
+        function toggleEmployeeActive(index, isActive) {
+            const employees = getFromStorage('employees', []);
+            employees[index].active = isActive;
+            
+            saveToStorage('employees', employees).then(() => {
+                showToast(`Employee ${isActive ? 'activated' : 'deactivated'}`);
+                loadEmployeeList();
+            });
+        }
+        
+        function loadClockInScreen() {
+            const allEmployees = getFromStorage('employees', []);
+            // Filter only active employees
+            const employees = allEmployees.filter(emp => emp.active !== false);
             const grid = document.getElementById('clockInEmployeeGrid');
             
             grid.innerHTML = '';
             
             if (employees.length === 0) {
-                grid.innerHTML = '<p style="text-align: center; color: #666;">No employees enrolled yet</p>';
+                grid.innerHTML = '<p style="text-align: center; color: #666;">No current employees</p>';
                 return;
             }
             
@@ -2432,13 +2668,15 @@
         }
         
         function loadClockOutScreen() {
-            const employees = getFromStorage('employees', []);
+            const allEmployees = getFromStorage('employees', []);
+            // Filter only active employees
+            const employees = allEmployees.filter(emp => emp.active !== false);
             const grid = document.getElementById('clockOutEmployeeGrid');
             
             grid.innerHTML = '';
             
             if (employees.length === 0) {
-                grid.innerHTML = '<p style="text-align: center; color: #666;">No employees enrolled yet</p>';
+                grid.innerHTML = '<p style="text-align: center; color: #666;">No current employees</p>';
                 return;
             }
             
@@ -3053,57 +3291,350 @@
         function loadSettingsScreen() {
             if (!currentFruit) return;
             
+            loadPunnetSettingsList();
+            loadVarietiesList();
+            loadBlocksList();
+        }
+        
+        // ============= PUNNET SETTINGS =============
+        function loadPunnetSettingsList() {
             const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
-            const varieties = getFromStorage('varieties', []);
-            const blocks = getFromStorage('blocks', []);
+            const container = document.getElementById('punnetSettingsList');
             
-            const tbody = document.getElementById('punnetSettingsBody');
-            tbody.innerHTML = '';
+            container.innerHTML = '';
             
             Object.entries(punnetSettings).forEach(([size, settings]) => {
-                const row = tbody.insertRow();
-                row.innerHTML = `
-                    <td style="padding: 12px; border-bottom: 1px solid #eee;"><strong>${size}</strong></td>
-                    <td style="padding: 12px; border-bottom: 1px solid #eee;">
-                        <select id="grade_${size}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                            <option value="First" ${settings.grade === 'First' ? 'selected' : ''}>First</option>
-                            <option value="Second" ${settings.grade === 'Second' ? 'selected' : ''}>Second</option>
-                        </select>
-                    </td>
-                    <td style="padding: 12px; border-bottom: 1px solid #eee;">
-                        <input type="number" id="punnets_${size}" value="${settings.punnetsPerCrate}" min="0" ${size === 'Frozen' ? 'disabled' : ''} style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                    </td>
-                    <td style="padding: 12px; border-bottom: 1px solid #eee;">
-                        <input type="number" id="weight_${size}" value="${settings.punnetWeightG}" min="0" ${size === 'Frozen' ? 'disabled' : ''} style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                    </td>
+                const isActive = settings.active !== false; // Default to true if not set
+                
+                const item = document.createElement('div');
+                item.style.cssText = 'padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;';
+                
+                item.innerHTML = `
+                    <div style="flex: 1;">
+                        <strong style="font-size: 16px;">${size}</strong>
+                        <div style="color: #666; font-size: 14px; margin-top: 5px;">
+                            Grade: ${settings.grade} | Punnets/Crate: ${settings.punnetsPerCrate} | Weight: ${settings.punnetWeightG}g
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" ${isActive ? 'checked' : ''} onchange="togglePunnetActive('${size}', this.checked)">
+                            <span>Active</span>
+                        </label>
+                        <button class="btn btn-primary" onclick="openEditPunnetForm('${size}')" style="padding: 8px 15px;">✏️ Edit</button>
+                    </div>
                 `;
+                
+                container.appendChild(item);
             });
+        }
+        
+        function openAddPunnetForm() {
+            document.getElementById('punnetFormTitle').textContent = 'Add Punnet Size';
+            document.getElementById('punnetFormIndex').value = '';
+            document.getElementById('punnetFormSize').value = '';
+            document.getElementById('punnetFormSize').readOnly = false;
+            document.getElementById('punnetFormGrade').value = 'First';
+            document.getElementById('punnetFormPunnets').value = '';
+            document.getElementById('punnetFormWeight').value = '';
+            document.getElementById('punnetFormModal').style.display = 'flex';
+        }
+        
+        function openEditPunnetForm(size) {
+            const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            const settings = punnetSettings[size];
             
-            document.getElementById('varietiesList').value = varieties.join('\n');
-            document.getElementById('blocksList').value = blocks.join('\n');
+            document.getElementById('punnetFormTitle').textContent = 'Edit Punnet Size';
+            document.getElementById('punnetFormIndex').value = size;
+            document.getElementById('punnetFormSize').value = size;
+            document.getElementById('punnetFormSize').readOnly = true; // Can't change size name when editing
+            document.getElementById('punnetFormGrade').value = settings.grade;
+            document.getElementById('punnetFormPunnets').value = settings.punnetsPerCrate;
+            document.getElementById('punnetFormWeight').value = settings.punnetWeightG;
+            document.getElementById('punnetFormModal').style.display = 'flex';
+        }
+        
+        function savePunnetForm() {
+            const size = document.getElementById('punnetFormSize').value.trim();
+            const grade = document.getElementById('punnetFormGrade').value;
+            const punnets = parseInt(document.getElementById('punnetFormPunnets').value);
+            const weight = parseInt(document.getElementById('punnetFormWeight').value);
+            
+            if (!size || !punnets || !weight) {
+                showToast('Please fill in all fields');
+                return;
+            }
+            
+            const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            const isEdit = document.getElementById('punnetFormIndex').value !== '';
+            
+            punnetSettings[size] = {
+                grade: grade,
+                punnetsPerCrate: punnets,
+                punnetWeightG: weight,
+                active: true
+            };
+            
+            saveToStorage('punnetSettings', punnetSettings).then(() => {
+                showToast(isEdit ? 'Punnet size updated!' : 'Punnet size added!');
+                closePunnetForm();
+                loadPunnetSettingsList();
+            });
+        }
+        
+        function closePunnetForm() {
+            document.getElementById('punnetFormModal').style.display = 'none';
+        }
+        
+        function togglePunnetActive(size, isActive) {
+            const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            if (punnetSettings[size]) {
+                punnetSettings[size].active = isActive;
+                saveToStorage('punnetSettings', punnetSettings).then(() => {
+                    showToast(`${size} ${isActive ? 'activated' : 'deactivated'}`);
+                });
+            }
+        }
+        
+        // ============= VARIETIES =============
+        function loadVarietiesList() {
+            const varietiesData = getFromStorage('varieties', []);
+            const container = document.getElementById('varietiesList');
+            
+            container.innerHTML = '';
+            
+            if (varietiesData.length === 0) {
+                container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No varieties added yet</p>';
+                return;
+            }
+            
+            varietiesData.forEach((variety, index) => {
+                const isActive = variety.active !== false;
+                const name = typeof variety === 'string' ? variety : variety.name;
+                
+                const item = document.createElement('div');
+                item.style.cssText = 'padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;';
+                
+                item.innerHTML = `
+                    <div style="flex: 1;">
+                        <strong>${name}</strong>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleVarietyActive(${index}, this.checked)">
+                            <span>Active</span>
+                        </label>
+                        <button class="btn btn-primary" onclick="openEditVarietyForm(${index})" style="padding: 6px 12px; font-size: 14px;">✏️ Edit</button>
+                    </div>
+                `;
+                
+                container.appendChild(item);
+            });
+        }
+        
+        function openAddVarietyForm() {
+            document.getElementById('varietyFormTitle').textContent = 'Add Variety';
+            document.getElementById('varietyFormIndex').value = '';
+            document.getElementById('varietyFormName').value = '';
+            document.getElementById('varietyFormModal').style.display = 'flex';
+        }
+        
+        function openEditVarietyForm(index) {
+            const varietiesData = getFromStorage('varieties', []);
+            const variety = varietiesData[index];
+            const name = typeof variety === 'string' ? variety : variety.name;
+            
+            document.getElementById('varietyFormTitle').textContent = 'Edit Variety';
+            document.getElementById('varietyFormIndex').value = index;
+            document.getElementById('varietyFormName').value = name;
+            document.getElementById('varietyFormModal').style.display = 'flex';
+        }
+        
+        function saveVarietyForm() {
+            const name = document.getElementById('varietyFormName').value.trim();
+            const index = document.getElementById('varietyFormIndex').value;
+            
+            if (!name) {
+                showToast('Please enter a variety name');
+                return;
+            }
+            
+            const varietiesData = getFromStorage('varieties', []);
+            
+            if (index === '') {
+                // Adding new
+                varietiesData.push({ name: name, active: true });
+            } else {
+                // Editing existing
+                const variety = varietiesData[parseInt(index)];
+                if (typeof variety === 'string') {
+                    varietiesData[parseInt(index)] = { name: name, active: true };
+                } else {
+                    variety.name = name;
+                }
+            }
+            
+            saveToStorage('varieties', varietiesData).then(() => {
+                showToast(index === '' ? 'Variety added!' : 'Variety updated!');
+                closeVarietyForm();
+                loadVarietiesList();
+            });
+        }
+        
+        function closeVarietyForm() {
+            document.getElementById('varietyFormModal').style.display = 'none';
+        }
+        
+        function toggleVarietyActive(index, isActive) {
+            const varietiesData = getFromStorage('varieties', []);
+            const variety = varietiesData[index];
+            
+            if (typeof variety === 'string') {
+                varietiesData[index] = { name: variety, active: isActive };
+            } else {
+                variety.active = isActive;
+            }
+            
+            // Check if variety is used in records
+            if (!isActive) {
+                const records = getFromStorage('harvestRecords', []);
+                const varietyName = typeof variety === 'string' ? variety : variety.name;
+                const hasRecords = records.some(r => r.variety === varietyName);
+                
+                if (hasRecords) {
+                    if (!confirm(`This variety has existing records. Deactivating will hide it from dropdowns but keep historical data. Continue?`)) {
+                        loadVarietiesList(); // Reload to reset checkbox
+                        return;
+                    }
+                }
+            }
+            
+            saveToStorage('varieties', varietiesData).then(() => {
+                showToast(`Variety ${isActive ? 'activated' : 'deactivated'}`);
+            });
+        }
+        
+        // ============= BLOCKS =============
+        function loadBlocksList() {
+            const blocksData = getFromStorage('blocks', []);
+            const container = document.getElementById('blocksList');
+            
+            container.innerHTML = '';
+            
+            if (blocksData.length === 0) {
+                container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No blocks added yet</p>';
+                return;
+            }
+            
+            blocksData.forEach((block, index) => {
+                const isActive = block.active !== false;
+                const name = typeof block === 'string' ? block : block.name;
+                
+                const item = document.createElement('div');
+                item.style.cssText = 'padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;';
+                
+                item.innerHTML = `
+                    <div style="flex: 1;">
+                        <strong>${name}</strong>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleBlockActive(${index}, this.checked)">
+                            <span>Active</span>
+                        </label>
+                        <button class="btn btn-primary" onclick="openEditBlockForm(${index})" style="padding: 6px 12px; font-size: 14px;">✏️ Edit</button>
+                    </div>
+                `;
+                
+                container.appendChild(item);
+            });
+        }
+        
+        function openAddBlockForm() {
+            document.getElementById('blockFormTitle').textContent = 'Add Block';
+            document.getElementById('blockFormIndex').value = '';
+            document.getElementById('blockFormName').value = '';
+            document.getElementById('blockFormModal').style.display = 'flex';
+        }
+        
+        function openEditBlockForm(index) {
+            const blocksData = getFromStorage('blocks', []);
+            const block = blocksData[index];
+            const name = typeof block === 'string' ? block : block.name;
+            
+            document.getElementById('blockFormTitle').textContent = 'Edit Block';
+            document.getElementById('blockFormIndex').value = index;
+            document.getElementById('blockFormName').value = name;
+            document.getElementById('blockFormModal').style.display = 'flex';
+        }
+        
+        function saveBlockForm() {
+            const name = document.getElementById('blockFormName').value.trim();
+            const index = document.getElementById('blockFormIndex').value;
+            
+            if (!name) {
+                showToast('Please enter a block name');
+                return;
+            }
+            
+            const blocksData = getFromStorage('blocks', []);
+            
+            if (index === '') {
+                // Adding new
+                blocksData.push({ name: name, active: true });
+            } else {
+                // Editing existing
+                const block = blocksData[parseInt(index)];
+                if (typeof block === 'string') {
+                    blocksData[parseInt(index)] = { name: name, active: true };
+                } else {
+                    block.name = name;
+                }
+            }
+            
+            saveToStorage('blocks', blocksData).then(() => {
+                showToast(index === '' ? 'Block added!' : 'Block updated!');
+                closeBlockForm();
+                loadBlocksList();
+            });
+        }
+        
+        function closeBlockForm() {
+            document.getElementById('blockFormModal').style.display = 'none';
+        }
+        
+        function toggleBlockActive(index, isActive) {
+            const blocksData = getFromStorage('blocks', []);
+            const block = blocksData[index];
+            
+            if (typeof block === 'string') {
+                blocksData[index] = { name: block, active: isActive };
+            } else {
+                block.active = isActive;
+            }
+            
+            // Check if block is used in records
+            if (!isActive) {
+                const records = getFromStorage('harvestRecords', []);
+                const blockName = typeof block === 'string' ? block : block.name;
+                const hasRecords = records.some(r => r.block === blockName);
+                
+                if (hasRecords) {
+                    if (!confirm(`This block has existing records. Deactivating will hide it from dropdowns but keep historical data. Continue?`)) {
+                        loadBlocksList(); // Reload to reset checkbox
+                        return;
+                    }
+                }
+            }
+            
+            saveToStorage('blocks', blocksData).then(() => {
+                showToast(`Block ${isActive ? 'activated' : 'deactivated'}`);
+            });
         }
         
         function saveSettings() {
-            const punnetSettings = {};
-            
-            sizes.forEach(size => {
-                punnetSettings[size] = {
-                    grade: document.getElementById(`grade_${size}`).value,
-                    punnetsPerCrate: size === 'Frozen' ? 0 : parseInt(document.getElementById(`punnets_${size}`).value),
-                    punnetWeightG: size === 'Frozen' ? 0 : parseInt(document.getElementById(`weight_${size}`).value)
-                };
-            });
-            
-            const varieties = normalizeList(document.getElementById('varietiesList').value);
-            const blocks = normalizeList(document.getElementById('blocksList').value);
-            
-            Promise.all([
-                saveToStorage('punnetSettings', punnetSettings),
-                saveToStorage('varieties', varieties),
-                saveToStorage('blocks', blocks)
-            ]).then(() => {
-                showToast('Settings saved!');
-            });
+            // This function is kept for backward compatibility but no longer used
+            showToast('Please use Add/Edit buttons to manage settings');
         }
         
         // ============= DATA SETTINGS =============
