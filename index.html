@@ -3647,36 +3647,42 @@
         function loadDataSettingsScreen() {
             if (!currentFruit) return;
             
-            const blocks = getFromStorage('blocks', []);
+            const blocksData = getFromStorage('blocks', []);
             const plantsPerBlock = getFromStorage('plantsPerBlock', {});
             const container = document.getElementById('plantsPerBlockContainer');
             
             container.innerHTML = '';
             
-            if (blocks.length === 0) {
+            if (blocksData.length === 0) {
                 container.innerHTML = '<p style="color: #666;">Please add blocks in Settings first</p>';
                 return;
             }
             
-            blocks.forEach(block => {
+            // Convert blocks to names (handle both string and object format)
+            const blocks = blocksData.map(b => typeof b === 'string' ? b : b.name);
+            
+            blocks.forEach(blockName => {
                 const div = document.createElement('div');
                 div.className = 'block-settings';
                 div.innerHTML = `
-                    <div class="block-settings-header">${block}</div>
-                    <input type="number" id="plants_${block.replace(/\s+/g, '_')}" value="${plantsPerBlock[block] || 1000}" min="0" placeholder="Number of plants">
+                    <div class="block-settings-header">${blockName}</div>
+                    <input type="number" id="plants_${blockName.replace(/\s+/g, '_')}" value="${plantsPerBlock[blockName] || 1000}" min="0" placeholder="Number of plants">
                 `;
                 container.appendChild(div);
             });
         }
         
         function saveDataSettings() {
-            const blocks = getFromStorage('blocks', []);
+            const blocksData = getFromStorage('blocks', []);
             const plantsPerBlock = {};
             
-            blocks.forEach(block => {
-                const input = document.getElementById(`plants_${block.replace(/\s+/g, '_')}`);
+            // Convert blocks to names (handle both string and object format)
+            const blocks = blocksData.map(b => typeof b === 'string' ? b : b.name);
+            
+            blocks.forEach(blockName => {
+                const input = document.getElementById(`plants_${blockName.replace(/\s+/g, '_')}`);
                 if (input) {
-                    plantsPerBlock[block] = parseInt(input.value) || 1000;
+                    plantsPerBlock[blockName] = parseInt(input.value) || 1000;
                 }
             });
             
@@ -3755,13 +3761,13 @@
                 return;
             }
             
-            // Show which collection each record is in
+            // Determine which collection each record is in
+            const fruitRecords = window.firebaseCache?.[`${currentFruit}_harvestRecords`] || [];
+            const oldRecords = window.firebaseCache?.['harvestRecords_OLD'] || [];
+            
             recordsToDelete.forEach(record => {
-                const fruitRecords = window.firebaseCache?.[`${currentFruit}_harvestRecords`] || [];
-                const oldRecords = window.firebaseCache?.['harvestRecords_OLD'] || [];
-                
-                const inFruit = fruitRecords.some(r => r.id === record.id);
-                const inOld = oldRecords.some(r => r.id === record.id);
+                const inFruit = fruitRecords.some(r => r.firestoreId === record.firestoreId);
+                const inOld = oldRecords.some(r => r.firestoreId === record.firestoreId);
                 
                 console.log(`📍 Record ${record.id}:`, {
                     firestoreId: record.firestoreId,
@@ -3784,37 +3790,44 @@
                     return { success: false, reason: 'no_firestore_id', recordId: record.id };
                 }
                 
-                console.log(`🔍 Deleting record ${record.id} with firestoreId: ${record.firestoreId}`);
+                console.log(`🔍 Deleting record ${record.id} (firestoreId: ${record.firestoreId})`);
                 
-                // Determine which collection this record is in
-                const fruitRecords = window.firebaseCache?.[`${currentFruit}_harvestRecords`] || [];
+                // Check which collection this record is ACTUALLY in
                 const isInFruitCollection = fruitRecords.some(r => r.firestoreId === record.firestoreId);
+                const isInOldCollection = oldRecords.some(r => r.firestoreId === record.firestoreId);
                 
-                // Try deleting from fruit-specific collection first IF record is there
-                if (currentFruit && isInFruitCollection) {
+                // Try fruit collection ONLY if record is actually there
+                if (isInFruitCollection) {
                     const fruitCollection = `${currentFruit}_harvestRecords`;
-                    console.log(`   → Trying ${fruitCollection}...`);
+                    console.log(`   → Deleting from ${fruitCollection}...`);
                     try {
                         await db.collection(fruitCollection).doc(record.firestoreId).delete();
                         deleteCount++;
-                        console.log(`   ✅ Successfully deleted from ${fruitCollection}`);
+                        console.log(`   ✅ Deleted from ${fruitCollection}`);
                         return { success: true, collection: fruitCollection, firestoreId: record.firestoreId, recordId: record.id };
                     } catch (error) {
-                        console.log(`   ❌ Failed in ${fruitCollection}:`, error.code, error.message);
+                        console.error(`   ❌ Failed:`, error.code, error.message);
+                        return { success: false, reason: error.message, recordId: record.id, firestoreId: record.firestoreId };
                     }
                 }
                 
-                // Try deleting from old harvestRecords collection
-                console.log(`   → Trying harvestRecords (old collection)...`);
-                try {
-                    await db.collection('harvestRecords').doc(record.firestoreId).delete();
-                    deleteCount++;
-                    console.log(`   ✅ Successfully deleted from harvestRecords`);
-                    return { success: true, collection: 'harvestRecords', firestoreId: record.firestoreId, recordId: record.id };
-                } catch (error) {
-                    console.error(`   ❌ Failed in harvestRecords:`, error.code, error.message);
-                    return { success: false, reason: error.message, recordId: record.id, firestoreId: record.firestoreId };
+                // Try old collection ONLY if record is actually there
+                if (isInOldCollection) {
+                    console.log(`   → Deleting from harvestRecords (old)...`);
+                    try {
+                        await db.collection('harvestRecords').doc(record.firestoreId).delete();
+                        deleteCount++;
+                        console.log(`   ✅ Deleted from harvestRecords`);
+                        return { success: true, collection: 'harvestRecords', firestoreId: record.firestoreId, recordId: record.id };
+                    } catch (error) {
+                        console.error(`   ❌ Failed:`, error.code, error.message);
+                        return { success: false, reason: error.message, recordId: record.id, firestoreId: record.firestoreId };
+                    }
                 }
+                
+                // Record not found in either collection
+                console.error(`   ❌ Record not found in any collection!`);
+                return { success: false, reason: 'not_in_any_collection', recordId: record.id, firestoreId: record.firestoreId };
             });
             
             Promise.all(deletePromises).then(async (results) => {
@@ -3859,7 +3872,7 @@
                                 });
                             });
                             window.firebaseCache[fruitCollection] = records;
-                            console.log(`📥 Reloaded from ${fruitCollection}:`, records.length, 'records');
+                            console.log(`📥 Reloaded ${fruitCollection}:`, records.length, 'records');
                         } catch (error) {
                             console.error('Error reloading fruit records:', error);
                         }
