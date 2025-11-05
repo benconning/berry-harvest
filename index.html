@@ -3736,7 +3736,7 @@
             
             const recordIds = Array.from(checkboxes).map(cb => cb.value);
             
-            if (!confirm(`Are you sure you want to delete ${recordIds.length} record(s)?`)) {
+            if (!confirm(`Are you sure you want to delete ${recordIds.length} record(s)? This cannot be undone.`)) {
                 return;
             }
             
@@ -3750,69 +3750,81 @@
             const recordsToDelete = allRecords.filter(record => recordIds.includes(String(record.id)));
             console.log('🎯 Records to delete:', recordsToDelete.length);
             
+            if (recordsToDelete.length === 0) {
+                showToast('No records found to delete');
+                return;
+            }
+            
             // Delete from Firestore
             let deleteCount = 0;
-            const deletePromises = recordsToDelete.map(record => {
-                if (record.firestoreId) {
-                    console.log('Deleting from Firestore:', record.firestoreId);
-                    
-                    // Try both old and new collections
-                    const collection = currentFruit ? `${currentFruit}_harvestRecords` : 'harvestRecords';
-                    
-                    return db.collection(collection).doc(record.firestoreId).delete()
-                        .then(() => {
-                            deleteCount++;
-                            console.log('✅ Deleted from', collection);
-                        })
-                        .catch((error) => {
-                            // If not found in fruit collection, try old collection
-                            if (currentFruit) {
-                                return db.collection('harvestRecords').doc(record.firestoreId).delete()
-                                    .then(() => {
-                                        deleteCount++;
-                                        console.log('✅ Deleted from harvestRecords');
-                                    })
-                                    .catch((err) => {
-                                        console.error('❌ Failed to delete:', err);
-                                    });
-                            } else {
-                                console.error('❌ Failed to delete:', error);
-                            }
-                        });
-                } else {
+            const deletePromises = recordsToDelete.map(async (record) => {
+                if (!record.firestoreId) {
                     console.warn('⚠️ Record has no firestoreId:', record.id);
-                    return Promise.resolve();
+                    return;
+                }
+                
+                console.log('🔍 Attempting to delete:', record.firestoreId);
+                
+                // Try deleting from fruit-specific collection first
+                if (currentFruit) {
+                    const fruitCollection = `${currentFruit}_harvestRecords`;
+                    try {
+                        await db.collection(fruitCollection).doc(record.firestoreId).delete();
+                        deleteCount++;
+                        console.log('✅ Deleted from', fruitCollection);
+                        return;
+                    } catch (error) {
+                        console.log('⚠️ Not in fruit collection, trying old collection...');
+                    }
+                }
+                
+                // Try deleting from old harvestRecords collection
+                try {
+                    await db.collection('harvestRecords').doc(record.firestoreId).delete();
+                    deleteCount++;
+                    console.log('✅ Deleted from harvestRecords');
+                } catch (error) {
+                    console.error('❌ Failed to delete from any collection:', record.firestoreId, error);
                 }
             });
             
             Promise.all(deletePromises).then(() => {
-                showToast(`Deleted ${deleteCount} record(s)`);
-                
-                // UPDATE LOCAL CACHE IMMEDIATELY
-                // Remove deleted records from fruit-specific cache
-                if (currentFruit) {
-                    const fruitKey = `${currentFruit}_harvestRecords`;
-                    if (window.firebaseCache[fruitKey]) {
-                        window.firebaseCache[fruitKey] = window.firebaseCache[fruitKey].filter(
+                if (deleteCount > 0) {
+                    showToast(`Successfully deleted ${deleteCount} record(s)`);
+                    
+                    // UPDATE LOCAL CACHE IMMEDIATELY
+                    // Remove deleted records from fruit-specific cache
+                    if (currentFruit) {
+                        const fruitKey = `${currentFruit}_harvestRecords`;
+                        if (window.firebaseCache[fruitKey]) {
+                            const beforeCount = window.firebaseCache[fruitKey].length;
+                            window.firebaseCache[fruitKey] = window.firebaseCache[fruitKey].filter(
+                                record => !recordIds.includes(String(record.id))
+                            );
+                            console.log('🔄 Updated fruit cache:', beforeCount, '→', window.firebaseCache[fruitKey].length);
+                        }
+                    }
+                    
+                    // Remove deleted records from old cache
+                    if (window.firebaseCache['harvestRecords_OLD']) {
+                        const beforeCount = window.firebaseCache['harvestRecords_OLD'].length;
+                        window.firebaseCache['harvestRecords_OLD'] = window.firebaseCache['harvestRecords_OLD'].filter(
                             record => !recordIds.includes(String(record.id))
                         );
-                        console.log('🔄 Updated fruit cache:', window.firebaseCache[fruitKey].length, 'records remaining');
+                        console.log('🔄 Updated old cache:', beforeCount, '→', window.firebaseCache['harvestRecords_OLD'].length);
                     }
+                    
+                    // Uncheck select all
+                    document.getElementById('selectAll').checked = false;
+                    
+                    // Force immediate display update
+                    updateRecordsDisplay();
+                } else {
+                    showToast('Failed to delete records. Please try again.');
                 }
-                
-                // Remove deleted records from old cache
-                if (window.firebaseCache['harvestRecords_OLD']) {
-                    window.firebaseCache['harvestRecords_OLD'] = window.firebaseCache['harvestRecords_OLD'].filter(
-                        record => !recordIds.includes(String(record.id))
-                    );
-                    console.log('🔄 Updated old cache:', window.firebaseCache['harvestRecords_OLD'].length, 'records remaining');
-                }
-                
-                // Uncheck select all
-                document.getElementById('selectAll').checked = false;
-                
-                // Force immediate display update
-                updateRecordsDisplay();
+            }).catch(error => {
+                console.error('Delete operation failed:', error);
+                showToast('Error deleting records. Please try again.');
             });
         }
         
