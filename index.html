@@ -3749,12 +3749,26 @@
             // Find records to delete
             const recordsToDelete = allRecords.filter(record => recordIds.includes(String(record.id)));
             console.log('🎯 Records to delete:', recordsToDelete.length);
-            console.log('🔍 Records to delete:', recordsToDelete);
             
             if (recordsToDelete.length === 0) {
                 showToast('No records found to delete');
                 return;
             }
+            
+            // Show which collection each record is in
+            recordsToDelete.forEach(record => {
+                const fruitRecords = window.firebaseCache?.[`${currentFruit}_harvestRecords`] || [];
+                const oldRecords = window.firebaseCache?.['harvestRecords_OLD'] || [];
+                
+                const inFruit = fruitRecords.some(r => r.id === record.id);
+                const inOld = oldRecords.some(r => r.id === record.id);
+                
+                console.log(`📍 Record ${record.id}:`, {
+                    firestoreId: record.firestoreId,
+                    inFruitCollection: inFruit,
+                    inOldCollection: inOld
+                });
+            });
             
             // Show loading state
             const deleteBtn = document.getElementById('deleteSelectedBtn');
@@ -3767,44 +3781,59 @@
             const deletePromises = recordsToDelete.map(async (record) => {
                 if (!record.firestoreId) {
                     console.warn('⚠️ Record has no firestoreId:', record.id);
-                    return { success: false, reason: 'no_firestore_id' };
+                    return { success: false, reason: 'no_firestore_id', recordId: record.id };
                 }
                 
-                console.log('🔍 Attempting to delete:', record.firestoreId, 'from record ID:', record.id);
+                console.log(`🔍 Deleting record ${record.id} with firestoreId: ${record.firestoreId}`);
                 
-                // Try deleting from fruit-specific collection first
-                if (currentFruit) {
+                // Determine which collection this record is in
+                const fruitRecords = window.firebaseCache?.[`${currentFruit}_harvestRecords`] || [];
+                const isInFruitCollection = fruitRecords.some(r => r.firestoreId === record.firestoreId);
+                
+                // Try deleting from fruit-specific collection first IF record is there
+                if (currentFruit && isInFruitCollection) {
                     const fruitCollection = `${currentFruit}_harvestRecords`;
+                    console.log(`   → Trying ${fruitCollection}...`);
                     try {
                         await db.collection(fruitCollection).doc(record.firestoreId).delete();
                         deleteCount++;
-                        console.log('✅ Deleted from', fruitCollection);
-                        return { success: true, collection: fruitCollection, firestoreId: record.firestoreId };
+                        console.log(`   ✅ Successfully deleted from ${fruitCollection}`);
+                        return { success: true, collection: fruitCollection, firestoreId: record.firestoreId, recordId: record.id };
                     } catch (error) {
-                        console.log('⚠️ Not in fruit collection, trying old collection...', error.message);
+                        console.log(`   ❌ Failed in ${fruitCollection}:`, error.code, error.message);
                     }
                 }
                 
                 // Try deleting from old harvestRecords collection
+                console.log(`   → Trying harvestRecords (old collection)...`);
                 try {
                     await db.collection('harvestRecords').doc(record.firestoreId).delete();
                     deleteCount++;
-                    console.log('✅ Deleted from harvestRecords');
-                    return { success: true, collection: 'harvestRecords', firestoreId: record.firestoreId };
+                    console.log(`   ✅ Successfully deleted from harvestRecords`);
+                    return { success: true, collection: 'harvestRecords', firestoreId: record.firestoreId, recordId: record.id };
                 } catch (error) {
-                    console.error('❌ Failed to delete from any collection:', record.firestoreId, error);
-                    return { success: false, reason: error.message };
+                    console.error(`   ❌ Failed in harvestRecords:`, error.code, error.message);
+                    return { success: false, reason: error.message, recordId: record.id, firestoreId: record.firestoreId };
                 }
             });
             
             Promise.all(deletePromises).then(async (results) => {
-                console.log('✅ Delete results:', results);
+                console.log('📋 Delete results summary:', results);
+                
+                const successful = results.filter(r => r && r.success);
+                const failed = results.filter(r => !r || !r.success);
+                
+                console.log(`✅ Successful: ${successful.length}`);
+                console.log(`❌ Failed: ${failed.length}`);
+                
+                if (failed.length > 0) {
+                    console.error('Failed deletions:', failed);
+                }
                 
                 if (deleteCount > 0) {
                     showToast(`Successfully deleted ${deleteCount} record(s). Refreshing...`);
                     
                     // FORCE A COMPLETE RELOAD FROM FIREBASE
-                    // This bypasses any cache issues
                     console.log('🔄 Force reloading all records from Firebase...');
                     
                     // Clear local caches
@@ -3814,7 +3843,7 @@
                     }
                     delete window.firebaseCache['harvestRecords_OLD'];
                     
-                    // Wait 1 second for Firebase to propagate, then reload from server
+                    // Wait 1 second for Firebase to propagate
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     
                     // Force fetch from Firebase
@@ -3830,7 +3859,7 @@
                                 });
                             });
                             window.firebaseCache[fruitCollection] = records;
-                            console.log('📥 Reloaded from', fruitCollection, ':', records.length, 'records');
+                            console.log(`📥 Reloaded from ${fruitCollection}:`, records.length, 'records');
                         } catch (error) {
                             console.error('Error reloading fruit records:', error);
                         }
@@ -3867,10 +3896,10 @@
                 } else {
                     deleteBtn.textContent = originalText;
                     deleteBtn.disabled = false;
-                    showToast('Failed to delete records. Please try again.');
+                    showToast('Failed to delete records. Please check console for details.');
                 }
             }).catch(error => {
-                console.error('Delete operation failed:', error);
+                console.error('❌ Delete operation failed:', error);
                 deleteBtn.textContent = originalText;
                 deleteBtn.disabled = false;
                 showToast('Error deleting records. Please try again.');
