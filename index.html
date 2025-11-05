@@ -3756,12 +3756,18 @@
                 return;
             }
             
+            // Show loading state
+            const deleteBtn = document.getElementById('deleteSelectedBtn');
+            const originalText = deleteBtn.textContent;
+            deleteBtn.textContent = '⏳ Deleting...';
+            deleteBtn.disabled = true;
+            
             // Delete from Firestore
             let deleteCount = 0;
             const deletePromises = recordsToDelete.map(async (record) => {
                 if (!record.firestoreId) {
                     console.warn('⚠️ Record has no firestoreId:', record.id);
-                    return;
+                    return { success: false, reason: 'no_firestore_id' };
                 }
                 
                 console.log('🔍 Attempting to delete:', record.firestoreId, 'from record ID:', record.id);
@@ -3773,7 +3779,7 @@
                         await db.collection(fruitCollection).doc(record.firestoreId).delete();
                         deleteCount++;
                         console.log('✅ Deleted from', fruitCollection);
-                        return { success: true, collection: fruitCollection };
+                        return { success: true, collection: fruitCollection, firestoreId: record.firestoreId };
                     } catch (error) {
                         console.log('⚠️ Not in fruit collection, trying old collection...', error.message);
                     }
@@ -3784,35 +3790,89 @@
                     await db.collection('harvestRecords').doc(record.firestoreId).delete();
                     deleteCount++;
                     console.log('✅ Deleted from harvestRecords');
-                    return { success: true, collection: 'harvestRecords' };
+                    return { success: true, collection: 'harvestRecords', firestoreId: record.firestoreId };
                 } catch (error) {
                     console.error('❌ Failed to delete from any collection:', record.firestoreId, error);
-                    return { success: false };
+                    return { success: false, reason: error.message };
                 }
             });
             
-            Promise.all(deletePromises).then((results) => {
+            Promise.all(deletePromises).then(async (results) => {
                 console.log('✅ Delete results:', results);
                 
                 if (deleteCount > 0) {
-                    showToast(`Successfully deleted ${deleteCount} record(s)`);
+                    showToast(`Successfully deleted ${deleteCount} record(s). Refreshing...`);
                     
-                    // IMPORTANT: Wait a moment for Firebase listeners to update
-                    // The onSnapshot listeners will automatically update the cache
-                    setTimeout(() => {
-                        console.log('🔄 Refreshing display after Firebase sync...');
-                        
-                        // Uncheck select all
-                        document.getElementById('selectAll').checked = false;
-                        
-                        // Force display update
-                        updateRecordsDisplay();
-                    }, 500); // Wait 500ms for Firebase to sync
+                    // FORCE A COMPLETE RELOAD FROM FIREBASE
+                    // This bypasses any cache issues
+                    console.log('🔄 Force reloading all records from Firebase...');
+                    
+                    // Clear local caches
+                    if (currentFruit) {
+                        const fruitKey = `${currentFruit}_harvestRecords`;
+                        delete window.firebaseCache[fruitKey];
+                    }
+                    delete window.firebaseCache['harvestRecords_OLD'];
+                    
+                    // Wait 1 second for Firebase to propagate, then reload from server
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Force fetch from Firebase
+                    if (currentFruit) {
+                        const fruitCollection = `${currentFruit}_harvestRecords`;
+                        try {
+                            const snapshot = await db.collection(fruitCollection).get();
+                            const records = [];
+                            snapshot.forEach((doc) => {
+                                records.push({
+                                    firestoreId: doc.id,
+                                    ...doc.data()
+                                });
+                            });
+                            window.firebaseCache[fruitCollection] = records;
+                            console.log('📥 Reloaded from', fruitCollection, ':', records.length, 'records');
+                        } catch (error) {
+                            console.error('Error reloading fruit records:', error);
+                        }
+                    }
+                    
+                    // Reload old collection
+                    try {
+                        const oldSnapshot = await db.collection('harvestRecords').get();
+                        const oldRecords = [];
+                        oldSnapshot.forEach((doc) => {
+                            oldRecords.push({
+                                firestoreId: doc.id,
+                                ...doc.data()
+                            });
+                        });
+                        window.firebaseCache['harvestRecords_OLD'] = oldRecords;
+                        console.log('📥 Reloaded old records:', oldRecords.length, 'records');
+                    } catch (error) {
+                        console.error('Error reloading old records:', error);
+                    }
+                    
+                    // Uncheck select all
+                    document.getElementById('selectAll').checked = false;
+                    
+                    // Re-enable button
+                    deleteBtn.textContent = originalText;
+                    deleteBtn.disabled = false;
+                    deleteBtn.style.display = 'none';
+                    
+                    // Force display update
+                    updateRecordsDisplay();
+                    
+                    console.log('✅ Delete and reload complete!');
                 } else {
+                    deleteBtn.textContent = originalText;
+                    deleteBtn.disabled = false;
                     showToast('Failed to delete records. Please try again.');
                 }
             }).catch(error => {
                 console.error('Delete operation failed:', error);
+                deleteBtn.textContent = originalText;
+                deleteBtn.disabled = false;
                 showToast('Error deleting records. Please try again.');
             });
         }
