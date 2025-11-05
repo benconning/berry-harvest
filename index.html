@@ -2950,22 +2950,28 @@
         function loadRecordsScreen() {
             if (!currentFruit) return;
             
-            const varieties = getFromStorage('varieties', []);
-            const blocks = getFromStorage('blocks', []);
+            const varietiesData = getFromStorage('varieties', []);
+            const blocksData = getFromStorage('blocks', []);
             const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            
+            // Convert varieties to names (handle both string and object format)
+            const varietyNames = varietiesData.map(v => typeof v === 'string' ? v : v.name);
             
             const filterVariety = document.getElementById('filterVariety');
             if (filterVariety) {
                 filterVariety.innerHTML = '<option value="">All Varieties</option>';
-                varieties.forEach(v => {
+                varietyNames.forEach(v => {
                     filterVariety.innerHTML += `<option value="${v}">${v}</option>`;
                 });
             }
             
+            // Convert blocks to names (handle both string and object format)
+            const blockNames = blocksData.map(b => typeof b === 'string' ? b : b.name);
+            
             const filterBlock = document.getElementById('filterBlock');
             if (filterBlock) {
                 filterBlock.innerHTML = '<option value="">All Blocks</option>';
-                blocks.forEach(b => {
+                blockNames.forEach(b => {
                     filterBlock.innerHTML += `<option value="${b}">${b}</option>`;
                 });
             }
