@@ -3749,6 +3749,7 @@
             // Find records to delete
             const recordsToDelete = allRecords.filter(record => recordIds.includes(String(record.id)));
             console.log('🎯 Records to delete:', recordsToDelete.length);
+            console.log('🔍 Records to delete:', recordsToDelete);
             
             if (recordsToDelete.length === 0) {
                 showToast('No records found to delete');
@@ -3763,7 +3764,7 @@
                     return;
                 }
                 
-                console.log('🔍 Attempting to delete:', record.firestoreId);
+                console.log('🔍 Attempting to delete:', record.firestoreId, 'from record ID:', record.id);
                 
                 // Try deleting from fruit-specific collection first
                 if (currentFruit) {
@@ -3772,9 +3773,9 @@
                         await db.collection(fruitCollection).doc(record.firestoreId).delete();
                         deleteCount++;
                         console.log('✅ Deleted from', fruitCollection);
-                        return;
+                        return { success: true, collection: fruitCollection };
                     } catch (error) {
-                        console.log('⚠️ Not in fruit collection, trying old collection...');
+                        console.log('⚠️ Not in fruit collection, trying old collection...', error.message);
                     }
                 }
                 
@@ -3783,42 +3784,30 @@
                     await db.collection('harvestRecords').doc(record.firestoreId).delete();
                     deleteCount++;
                     console.log('✅ Deleted from harvestRecords');
+                    return { success: true, collection: 'harvestRecords' };
                 } catch (error) {
                     console.error('❌ Failed to delete from any collection:', record.firestoreId, error);
+                    return { success: false };
                 }
             });
             
-            Promise.all(deletePromises).then(() => {
+            Promise.all(deletePromises).then((results) => {
+                console.log('✅ Delete results:', results);
+                
                 if (deleteCount > 0) {
                     showToast(`Successfully deleted ${deleteCount} record(s)`);
                     
-                    // UPDATE LOCAL CACHE IMMEDIATELY
-                    // Remove deleted records from fruit-specific cache
-                    if (currentFruit) {
-                        const fruitKey = `${currentFruit}_harvestRecords`;
-                        if (window.firebaseCache[fruitKey]) {
-                            const beforeCount = window.firebaseCache[fruitKey].length;
-                            window.firebaseCache[fruitKey] = window.firebaseCache[fruitKey].filter(
-                                record => !recordIds.includes(String(record.id))
-                            );
-                            console.log('🔄 Updated fruit cache:', beforeCount, '→', window.firebaseCache[fruitKey].length);
-                        }
-                    }
-                    
-                    // Remove deleted records from old cache
-                    if (window.firebaseCache['harvestRecords_OLD']) {
-                        const beforeCount = window.firebaseCache['harvestRecords_OLD'].length;
-                        window.firebaseCache['harvestRecords_OLD'] = window.firebaseCache['harvestRecords_OLD'].filter(
-                            record => !recordIds.includes(String(record.id))
-                        );
-                        console.log('🔄 Updated old cache:', beforeCount, '→', window.firebaseCache['harvestRecords_OLD'].length);
-                    }
-                    
-                    // Uncheck select all
-                    document.getElementById('selectAll').checked = false;
-                    
-                    // Force immediate display update
-                    updateRecordsDisplay();
+                    // IMPORTANT: Wait a moment for Firebase listeners to update
+                    // The onSnapshot listeners will automatically update the cache
+                    setTimeout(() => {
+                        console.log('🔄 Refreshing display after Firebase sync...');
+                        
+                        // Uncheck select all
+                        document.getElementById('selectAll').checked = false;
+                        
+                        // Force display update
+                        updateRecordsDisplay();
+                    }, 500); // Wait 500ms for Firebase to sync
                 } else {
                     showToast('Failed to delete records. Please try again.');
                 }
