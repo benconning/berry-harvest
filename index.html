@@ -2213,6 +2213,78 @@
             await initializeScanner();
         }
         
+        // ============= SCAN SCREEN =============
+        function loadScanScreen() {
+            if (!currentFruit) return;
+            
+            const varietiesData = getFromStorage('varieties', []);
+            const blocksData = getFromStorage('blocks', []);
+            const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            
+            // Filter only ACTIVE varieties
+            const activeVarieties = varietiesData.filter(v => {
+                const isActive = (typeof v === 'string') ? true : (v.active !== false);
+                return isActive;
+            }).map(v => typeof v === 'string' ? v : v.name);
+            
+            const varietySelect = document.getElementById('scanVariety');
+            if (varietySelect) {
+                varietySelect.innerHTML = '<option value="">Select Variety</option>';
+                activeVarieties.forEach(v => {
+                    varietySelect.innerHTML += `<option value="${v}">${v}</option>`;
+                });
+            }
+            
+            // Filter only ACTIVE blocks
+            const activeBlocks = blocksData.filter(b => {
+                const isActive = (typeof b === 'string') ? true : (b.active !== false);
+                return isActive;
+            }).map(b => typeof b === 'string' ? b : b.name);
+            
+            const blockSelect = document.getElementById('scanBlock');
+            if (blockSelect) {
+                blockSelect.innerHTML = '<option value="">Select Block</option>';
+                activeBlocks.forEach(b => {
+                    blockSelect.innerHTML += `<option value="${b}">${b}</option>`;
+                });
+            }
+            
+            // Filter only ACTIVE punnet sizes
+            const sizeSelect = document.getElementById('scanSize');
+            if (sizeSelect) {
+                sizeSelect.innerHTML = '<option value="">Select Size</option>';
+                Object.entries(punnetSettings).forEach(([size, settings]) => {
+                    const isActive = settings.active !== false;
+                    if (isActive) {
+                        sizeSelect.innerHTML += `<option value="${size}">${size}</option>`;
+                    }
+                });
+            }
+        }
+        
+        async function startScanning() {
+            const variety = document.getElementById('scanVariety').value;
+            const block = document.getElementById('scanBlock').value;
+            const size = document.getElementById('scanSize').value;
+            
+            if (!variety || !block || !size) {
+                showToast('Please select variety, block, and size');
+                return;
+            }
+            
+            // Save scan context
+            const context = {
+                variety: variety,
+                block: block,
+                size: size
+            };
+            saveToStorage('scanContext', context);
+            
+            // Open scanner overlay
+            document.getElementById('scannerOverlay').classList.add('active');
+            await initializeScanner();
+        }
+        
         async function initializeScanner() {
             const statusElement = document.getElementById('scannerStatus');
             const captureButton = document.getElementById('captureButton');
