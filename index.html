@@ -2388,9 +2388,18 @@
         function captureCode() {
             if (!detectedCode) return;
             
-            // Add flash effect
+            // Add flash effect (force browser reflow to restart animation)
             const overlay = document.getElementById('scannerOverlay');
             const content = document.querySelector('.scanner-content');
+            
+            // Remove classes first if they exist
+            overlay.classList.remove('flash');
+            content.classList.remove('frozen');
+            
+            // Force reflow
+            void overlay.offsetWidth;
+            
+            // Add classes back
             overlay.classList.add('flash');
             content.classList.add('frozen');
             
@@ -2438,6 +2447,9 @@
             const container = document.getElementById('batchTallyContainer');
             const list = document.getElementById('batchTallyList');
             
+            console.log('📊 Updating batch tally:', batchTally);
+            console.log('📦 Tally entries:', Object.keys(batchTally).length);
+            
             // Show container if we have any tallies
             if (Object.keys(batchTally).length > 0) {
                 container.style.display = 'block';
@@ -2449,8 +2461,11 @@
                 list.innerHTML = sorted.map(([picker, count]) => 
                     `<div style="padding: 3px 0;">${picker}: ${count}</div>`
                 ).join('');
+                
+                console.log('✅ Tally displayed:', sorted);
             } else {
                 container.style.display = 'none';
+                console.log('❌ No tallies to display');
             }
         }
         
@@ -2584,6 +2599,57 @@
         }
         
         function closeScanner() {
+            // If there are unsaved records in current batch, delete them
+            const currentBatch = getFromStorage('currentBatchId', 1);
+            
+            if (currentBatchCrates > 0) {
+                if (confirm(`Delete ${currentBatchCrates} unsaved crate(s) from this batch?`)) {
+                    // Get all records
+                    const allRecords = getFromStorage('harvestRecords', []);
+                    
+                    // Find records from current batch
+                    const recordsToDelete = allRecords.filter(r => r.batch_id === currentBatch);
+                    
+                    console.log(`🗑️ Deleting ${recordsToDelete.length} records from batch ${currentBatch}`);
+                    
+                    // Delete from Firebase
+                    const deletePromises = recordsToDelete.map(async (record) => {
+                        if (!record.firestoreId) return;
+                        
+                        // Determine collection
+                        const fruitRecords = window.firebaseCache?.[`${currentFruit}_harvestRecords`] || [];
+                        const isInFruitCollection = fruitRecords.some(r => r.firestoreId === record.firestoreId);
+                        
+                        if (isInFruitCollection) {
+                            const fruitCollection = `${currentFruit}_harvestRecords`;
+                            try {
+                                await db.collection(fruitCollection).doc(record.firestoreId).delete();
+                                console.log(`✅ Deleted ${record.firestoreId} from ${fruitCollection}`);
+                            } catch (error) {
+                                console.error('Delete error:', error);
+                            }
+                        } else {
+                            try {
+                                await db.collection('harvestRecords').doc(record.firestoreId).delete();
+                                console.log(`✅ Deleted ${record.firestoreId} from harvestRecords`);
+                            } catch (error) {
+                                console.error('Delete error:', error);
+                            }
+                        }
+                    });
+                    
+                    Promise.all(deletePromises).then(() => {
+                        showToast(`Deleted ${recordsToDelete.length} unsaved record(s)`);
+                        
+                        // Force reload data from Firebase
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    });
+                }
+            }
+            
+            // Stop camera
             if (codeReader) {
                 codeReader.reset();
                 codeReader = null;
@@ -2594,14 +2660,21 @@
                 currentStream = null;
             }
             
+            // Close overlay
             document.getElementById('scannerOverlay').classList.remove('active');
             
+            // Reset scanner state
             detectedCode = null;
             scanPaused = false;
             document.getElementById('captureButton').disabled = true;
             document.getElementById('partialCrate').checked = false;
             document.getElementById('manualPunnets').style.display = 'none';
             document.getElementById('manualPunnets').value = '';
+            
+            // Reset batch tracking
+            currentBatchCrates = 0;
+            batchTally = {};
+            updateBatchTallyDisplay();
         }
         
         // ============= EMPLOYEE MODULE =============
