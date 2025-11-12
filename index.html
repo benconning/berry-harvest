@@ -901,9 +901,9 @@
                 <div class="scanner-status" id="scannerStatus">Initializing camera...</div>
                 
                 <!-- Batch Tally List -->
-                <div id="batchTallyContainer" style="background: rgba(0,0,0,0.7); border-radius: 8px; padding: 10px; margin: 10px 0; max-height: 150px; overflow-y: auto; display: none;">
-                    <div style="color: #fff; font-size: 14px; font-weight: 600; margin-bottom: 5px;">Batch Tally:</div>
-                    <div id="batchTallyList" style="color: #fff; font-size: 14px;">
+                <div id="batchTallyContainer" style="background: rgba(74, 144, 226, 0.95); border: 2px solid #fff; border-radius: 12px; padding: 15px; margin: 10px 0; max-height: 200px; overflow-y: auto; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    <div style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 8px; text-align: center;">📊 Batch Tally</div>
+                    <div id="batchTallyList" style="color: #fff; font-size: 15px; font-weight: 600;">
                         <!-- Will be populated dynamically -->
                     </div>
                 </div>
@@ -1188,7 +1188,7 @@
                         <th style="width: 40px; padding: 12px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
                         <th class="sortable" onclick="sortRecords('timestamp')">Date/Time</th>
                         <th class="sortable" onclick="sortRecords('picker_id')">Picker</th>
-                        <th class="sortable" onclick="sortRecords('crate_id')">Crate ID</th>
+                        <th class="sortable" onclick="sortRecords('batch_id')">Batch</th>
                         <th class="sortable" onclick="sortRecords('variety')">Variety</th>
                         <th class="sortable" onclick="sortRecords('block')">Block</th>
                         <th class="sortable" onclick="sortRecords('size')">Size</th>
@@ -2006,8 +2006,11 @@
         
         function updateBatchPill() {
             const batchId = getFromStorage('currentBatchId', 1);
-            document.getElementById('batchPill').textContent = `Batch #${batchId} - ${currentBatchCrates} crates`;
-            document.getElementById('scannerBatchLabel').textContent = `Batch #${batchId}`;
+            // Update only the scanner batch label (batchPill doesn't exist)
+            const scannerLabel = document.getElementById('scannerBatchLabel');
+            if (scannerLabel) {
+                scannerLabel.textContent = `Batch #${batchId} - ${currentBatchCrates} crates`;
+            }
         }
         
         function saveContext() {
@@ -2242,6 +2245,24 @@
                 return;
             }
             
+            // CRITICAL: Reset batch tracking for NEW scanning session
+            console.log('🔄 Starting NEW batch session - resetting tally');
+            currentBatchCrates = 0;
+            batchTally = {};
+            
+            // Hide and clear tally display
+            const tallyContainer = document.getElementById('batchTallyContainer');
+            if (tallyContainer) {
+                tallyContainer.style.display = 'none';
+                const tallyList = document.getElementById('batchTallyList');
+                if (tallyList) {
+                    tallyList.innerHTML = '';
+                }
+            }
+            
+            // Update batch label
+            updateBatchPill();
+            
             saveContext();
             document.getElementById('scannerOverlay').classList.add('active');
             await initializeScanner();
@@ -2249,11 +2270,32 @@
         
         // ============= SCAN SCREEN =============
         function loadScanScreen() {
-            if (!currentFruit) return;
+            console.log('🔄 loadScanScreen called, currentFruit:', currentFruit);
+            
+            if (!currentFruit) {
+                console.error('❌ currentFruit not set!');
+                return;
+            }
             
             const varietiesData = getFromStorage('varieties', []);
             const blocksData = getFromStorage('blocks', []);
             const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            
+            console.log('📦 Raw data loaded:', {
+                varieties: varietiesData.length,
+                blocks: blocksData.length,
+                punnetSettings: Object.keys(punnetSettings).length
+            });
+            
+            // If data is empty, wait and retry once
+            if (varietiesData.length === 0 || blocksData.length === 0) {
+                console.warn('⚠️ No data loaded yet, waiting 1 second...');
+                setTimeout(() => {
+                    console.log('🔄 Retrying loadScanScreen...');
+                    loadScanScreen();
+                }, 1000);
+                return;
+            }
             
             // Filter only ACTIVE varieties
             const activeVarieties = varietiesData.filter(v => {
@@ -2261,12 +2303,17 @@
                 return isActive;
             }).map(v => typeof v === 'string' ? v : v.name);
             
+            console.log('✅ Active varieties:', activeVarieties);
+            
             const varietySelect = document.getElementById('scanVariety');
             if (varietySelect) {
                 varietySelect.innerHTML = '<option value="">Select Variety</option>';
                 activeVarieties.forEach(v => {
                     varietySelect.innerHTML += `<option value="${v}">${v}</option>`;
                 });
+                console.log('✅ Variety dropdown populated');
+            } else {
+                console.error('❌ scanVariety element not found!');
             }
             
             // Filter only ACTIVE blocks
@@ -2275,12 +2322,17 @@
                 return isActive;
             }).map(b => typeof b === 'string' ? b : b.name);
             
+            console.log('✅ Active blocks:', activeBlocks);
+            
             const blockSelect = document.getElementById('scanBlock');
             if (blockSelect) {
                 blockSelect.innerHTML = '<option value="">Select Block</option>';
                 activeBlocks.forEach(b => {
                     blockSelect.innerHTML += `<option value="${b}">${b}</option>`;
                 });
+                console.log('✅ Block dropdown populated');
+            } else {
+                console.error('❌ scanBlock element not found!');
             }
             
             // Filter only ACTIVE punnet sizes
@@ -2293,6 +2345,9 @@
                         sizeSelect.innerHTML += `<option value="${size}">${size}</option>`;
                     }
                 });
+                console.log('✅ Size dropdown populated');
+            } else {
+                console.error('❌ scanSize element not found!');
             }
         }
         
@@ -2407,16 +2462,26 @@
             const parsed = parseQRCode(detectedCode);
             const record = createHarvestRecord(parsed);
             
+            console.log('🔍 Parsed QR:', parsed);
+            console.log('📝 Created record:', record);
+            console.log('👤 Looking for picker_id:', record.picker_id);
+            
             // Get picker name from employee list
             const employees = getFromStorage('employees', []);
+            console.log('👥 Available employees:', employees.map(e => ({ id: e.id, name: e.name })));
+            
             const employee = employees.find(emp => emp.id === record.picker_id);
+            console.log('✅ Found employee:', employee);
+            
             const pickerName = employee ? employee.name : record.picker_id;
+            console.log('🏷️ Using picker name:', pickerName);
             
             // Update batch tally
             if (!batchTally[pickerName]) {
                 batchTally[pickerName] = 0;
             }
             batchTally[pickerName]++;
+            console.log('📊 Updated tally:', batchTally);
             
             // Save to Firebase
             addRecord('harvestRecords', record).then(success => {
@@ -2449,20 +2514,31 @@
             
             console.log('📊 Updating batch tally:', batchTally);
             console.log('📦 Tally entries:', Object.keys(batchTally).length);
+            console.log('🎯 Container element found:', !!container);
+            console.log('🎯 List element found:', !!list);
+            
+            if (!container || !list) {
+                console.error('❌ Tally elements not found!');
+                return;
+            }
             
             // Show container if we have any tallies
             if (Object.keys(batchTally).length > 0) {
-                container.style.display = 'block';
-                
                 // Sort by picker name
                 const sorted = Object.entries(batchTally).sort((a, b) => a[0].localeCompare(b[0]));
                 
-                // Build HTML
+                // Build HTML with bright styling
                 list.innerHTML = sorted.map(([picker, count]) => 
-                    `<div style="padding: 3px 0;">${picker}: ${count}</div>`
+                    `<div style="padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.3);">${picker}: <strong>${count}</strong></div>`
                 ).join('');
                 
+                // Force display
+                container.style.display = 'block';
+                container.style.visibility = 'visible';
+                container.style.opacity = '1';
+                
                 console.log('✅ Tally displayed:', sorted);
+                console.log('✅ Container display:', container.style.display);
             } else {
                 container.style.display = 'none';
                 console.log('❌ No tallies to display');
@@ -2556,58 +2632,59 @@
         
         function completeBatch() {
             const currentBatch = getFromStorage('currentBatchId', 1);
-            const records = getFromStorage('harvestRecords', []);
             
-            // Get records from current batch
-            const batchRecords = records.filter(r => r.batch_id === currentBatch);
-            
-            if (batchRecords.length === 0) {
+            // Use the in-memory batchTally instead of querying Firebase
+            // This ensures we only show records from THIS session
+            if (Object.keys(batchTally).length === 0) {
                 showToast('No crates scanned in this batch');
                 closeScanner();
                 return;
             }
             
-            // Reset batch tally
-            batchTally = {};
-            updateBatchTallyDisplay();
-            
-            // Count crates per picker
-            const pickerCounts = {};
-            batchRecords.forEach(record => {
-                const picker = record.picker_id;
-                if (!pickerCounts[picker]) {
-                    pickerCounts[picker] = 0;
-                }
-                pickerCounts[picker] += (record.crate_count || 1);
-            });
-            
-            // Create summary message
+            // Create summary from current batch tally
             let summary = `Batch #${currentBatch} Summary:\n\n`;
-            Object.entries(pickerCounts).forEach(([picker, count]) => {
-                summary += `${picker}: ${count} crates\n`;
+            const totalCrates = Object.values(batchTally).reduce((sum, count) => sum + count, 0);
+            
+            Object.entries(batchTally).forEach(([picker, count]) => {
+                summary += `${picker}: ${count} crate${count > 1 ? 's' : ''}\n`;
             });
-            summary += `\nTotal: ${batchRecords.length} crates\n\nConfirm to save to records?`;
+            summary += `\nTotal: ${totalCrates} crate${totalCrates > 1 ? 's' : ''}\n\nConfirm to save to records?`;
             
             if (confirm(summary)) {
                 // Increment batch ID for next batch
                 saveToStorage('currentBatchId', currentBatch + 1);
                 
+                // Reset batch tracking
+                currentBatchCrates = 0;
+                batchTally = {};
+                updateBatchTallyDisplay();
+                
                 closeScanner();
-                showToast(`Batch #${currentBatch} complete! ${batchRecords.length} crates scanned`);
+                showToast(`Batch #${currentBatch} complete! ${totalCrates} crate${totalCrates > 1 ? 's' : ''} scanned`);
                 navigateToScreen('recordsScreen');
             }
         }
         
         function closeScanner() {
-            // If there are unsaved records in current batch, delete them
-            const currentBatch = getFromStorage('currentBatchId', 1);
+            // Check if there are unsaved records in current batch by looking at batchTally
+            const hasUnsavedScans = Object.keys(batchTally).length > 0;
             
-            if (currentBatchCrates > 0) {
-                if (confirm(`Delete ${currentBatchCrates} unsaved crate(s) from this batch?`)) {
+            console.log('🚪 Closing scanner. Unsaved scans:', hasUnsavedScans, 'Tally:', batchTally);
+            
+            if (hasUnsavedScans) {
+                const totalCrates = Object.values(batchTally).reduce((sum, count) => sum + count, 0);
+                
+                if (confirm(`Delete ${totalCrates} unsaved crate(s) from this batch?\n\n` + 
+                    Object.entries(batchTally).map(([picker, count]) => `${picker}: ${count}`).join('\n'))) {
+                    
+                    // Get current batch ID
+                    const currentBatch = getFromStorage('currentBatchId', 1);
+                    
                     // Get all records
                     const allRecords = getFromStorage('harvestRecords', []);
                     
-                    // Find records from current batch
+                    // Find records from current batch that match our tally
+                    // Filter by batch_id matching current batch
                     const recordsToDelete = allRecords.filter(r => r.batch_id === currentBatch);
                     
                     console.log(`🗑️ Deleting ${recordsToDelete.length} records from batch ${currentBatch}`);
@@ -2646,6 +2723,9 @@
                             window.location.reload();
                         }, 1000);
                     });
+                    
+                    // Don't proceed with closing until deletion completes
+                    return;
                 }
             }
             
@@ -2671,10 +2751,16 @@
             document.getElementById('manualPunnets').style.display = 'none';
             document.getElementById('manualPunnets').value = '';
             
-            // Reset batch tracking
+            // CRITICAL: Reset batch tracking when closing scanner
+            console.log('🔄 Resetting batch tracking on close');
             currentBatchCrates = 0;
             batchTally = {};
-            updateBatchTallyDisplay();
+            
+            // Hide tally
+            const tallyContainer = document.getElementById('batchTallyContainer');
+            if (tallyContainer) {
+                tallyContainer.style.display = 'none';
+            }
         }
         
         // ============= EMPLOYEE MODULE =============
@@ -3332,7 +3418,47 @@
             const filtered = filterRecords(records);
             console.log('🔍 After filtering:', filtered.length, 'records');
             
-            filtered.sort((a, b) => {
+            // Group records by batch_id and picker_id
+            const groupedRecords = {};
+            filtered.forEach(record => {
+                const batchId = record.batch_id || 1;
+                const pickerId = record.picker_id || 'Unknown';
+                const key = `${batchId}_${pickerId}`;
+                
+                if (!groupedRecords[key]) {
+                    groupedRecords[key] = {
+                        batch_id: batchId,
+                        picker_id: pickerId,
+                        timestamp: record.timestamp, // Use first record's timestamp
+                        variety: record.variety,
+                        block: record.block,
+                        size: record.size,
+                        grade: record.grade,
+                        crate_count: 0,
+                        total_punnets: 0,
+                        total_weight_kg: 0,
+                        is_partial: false,
+                        record_ids: [] // Track individual record IDs for deletion
+                    };
+                }
+                
+                // Sum up the values
+                groupedRecords[key].crate_count += (record.crate_count || 0);
+                groupedRecords[key].total_punnets += (record.total_punnets || 0);
+                groupedRecords[key].total_weight_kg += (record.total_weight_kg || 0);
+                groupedRecords[key].is_partial = groupedRecords[key].is_partial || record.is_partial;
+                groupedRecords[key].record_ids.push(record.id);
+                
+                // Use the latest timestamp
+                if (new Date(record.timestamp) > new Date(groupedRecords[key].timestamp)) {
+                    groupedRecords[key].timestamp = record.timestamp;
+                }
+            });
+            
+            // Convert to array and sort
+            const consolidatedRecords = Object.values(groupedRecords);
+            
+            consolidatedRecords.sort((a, b) => {
                 let aVal = a[currentSort.column];
                 let bVal = b[currentSort.column];
                 
@@ -3353,29 +3479,29 @@
             const tbody = document.getElementById('recordsTableBody');
             tbody.innerHTML = '';
             
-            if (filtered.length === 0) {
+            if (consolidatedRecords.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; color: #666;">No records found</td></tr>';
             } else {
                 const employees = getFromStorage('employees', []);
                 
-                filtered.forEach(record => {
+                consolidatedRecords.forEach(record => {
                     // Find employee name from picker_id
                     const employee = employees.find(emp => emp.id === record.picker_id);
                     const pickerName = employee ? employee.name : record.picker_id;
                     
                     const row = tbody.insertRow();
                     row.innerHTML = `
-                        <td style="padding: 12px;"><input type="checkbox" class="record-checkbox" value="${record.id}" onchange="updateDeleteButton()"></td>
+                        <td style="padding: 12px;"><input type="checkbox" class="record-checkbox" value="${record.record_ids.join(',')}" onchange="updateDeleteButton()"></td>
                         <td>${formatNZDateTime(record.timestamp)}</td>
                         <td>${pickerName}</td>
-                        <td>${record.crate_id || 'N/A'}</td>
+                        <td>Batch #${record.batch_id}</td>
                         <td>${record.variety || 'N/A'}</td>
                         <td>${record.block || 'N/A'}</td>
                         <td>${record.size || 'N/A'}</td>
                         <td>${record.grade || '-'}</td>
-                        <td>${record.crate_count || 0}</td>
-                        <td>${record.total_punnets || 0}</td>
-                        <td>${(record.total_weight_kg || 0).toFixed(2)}</td>
+                        <td>${record.crate_count}</td>
+                        <td>${record.total_punnets}</td>
+                        <td>${record.total_weight_kg.toFixed(2)}</td>
                         <td class="${record.is_partial ? 'partial' : ''}">${record.is_partial ? 'Yes' : 'No'}</td>
                     `;
                 });
@@ -3394,7 +3520,7 @@
                 sortedHeader.classList.add(`sort-${currentSort.direction}`);
             }
             
-            updateRecordsSummary(filtered);
+            updateRecordsSummary(filtered); // Still use filtered for totals
         }
         
         function updateRecordsSummary(records) {
@@ -3972,7 +4098,8 @@
             const checkboxes = document.querySelectorAll('.record-checkbox:checked');
             if (checkboxes.length === 0) return;
             
-            const recordIds = Array.from(checkboxes).map(cb => cb.value);
+            // Extract and flatten record IDs (handling comma-separated values from grouped records)
+            const recordIds = Array.from(checkboxes).flatMap(cb => cb.value.split(','));
             
             if (!confirm(`Are you sure you want to delete ${recordIds.length} record(s)? This cannot be undone.`)) {
                 return;
