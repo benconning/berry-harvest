@@ -381,6 +381,31 @@
             min-height: 50px;
         }
         
+        /* Flash effect for capture */
+        .scanner-overlay.flash::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            animation: flashEffect 0.5s ease-out;
+            z-index: 999;
+        }
+        
+        @keyframes flashEffect {
+            0% { opacity: 0; }
+            50% { opacity: 0.8; }
+            100% { opacity: 0; }
+        }
+        
+        .scanner-content.frozen video {
+            filter: brightness(1.2);
+        }
+        
         /* Employee Grid */
         .employee-grid {
             display: grid;
@@ -874,6 +899,15 @@
             <video id="preview"></video>
             <div class="scanner-controls">
                 <div class="scanner-status" id="scannerStatus">Initializing camera...</div>
+                
+                <!-- Batch Tally List -->
+                <div id="batchTallyContainer" style="background: rgba(0,0,0,0.7); border-radius: 8px; padding: 10px; margin: 10px 0; max-height: 150px; overflow-y: auto; display: none;">
+                    <div style="color: #fff; font-size: 14px; font-weight: 600; margin-bottom: 5px;">Batch Tally:</div>
+                    <div id="batchTallyList" style="color: #fff; font-size: 14px;">
+                        <!-- Will be populated dynamically -->
+                    </div>
+                </div>
+                
                 <div class="partial-crate-container">
                     <input type="checkbox" id="partialCrate" onchange="togglePartialCrate()">
                     <label for="partialCrate" style="color: white; margin: 0;">Partial crate</label>
@@ -881,8 +915,7 @@
                 </div>
                 <button class="capture-button" id="captureButton" onclick="captureCode()" disabled>📷</button>
                 <div class="scanner-actions">
-                    <button class="btn btn-primary" onclick="moreCrates()">➕ More Crates</button>
-                    <button class="btn btn-success" onclick="completeBatch()">✅ Complete Batch</button>
+                    <button class="btn btn-success" onclick="completeBatch()" style="width: 100%;">✅ Complete Batch</button>
                 </div>
             </div>
         </div>
@@ -2186,6 +2219,7 @@
         let currentStream = null;
         let detectedCode = null;
         let scanPaused = false;
+        let batchTally = {}; // Track crates per picker in current batch
         
         document.getElementById('partialCrate').addEventListener('change', function() {
             const punnetsInput = document.getElementById('manualPunnets');
@@ -2289,6 +2323,10 @@
             const statusElement = document.getElementById('scannerStatus');
             const captureButton = document.getElementById('captureButton');
             
+            // Reset batch tally for new scanning session
+            batchTally = {};
+            updateBatchTallyDisplay();
+            
             try {
                 statusElement.textContent = 'Requesting camera permission...';
                 
@@ -2350,21 +2388,70 @@
         function captureCode() {
             if (!detectedCode) return;
             
+            // Add flash effect
+            const overlay = document.getElementById('scannerOverlay');
+            const content = document.querySelector('.scanner-content');
+            overlay.classList.add('flash');
+            content.classList.add('frozen');
+            
+            // Parse and create record
             const parsed = parseQRCode(detectedCode);
             const record = createHarvestRecord(parsed);
+            
+            // Get picker name from employee list
+            const employees = getFromStorage('employees', []);
+            const employee = employees.find(emp => emp.id === record.picker_id);
+            const pickerName = employee ? employee.name : record.picker_id;
+            
+            // Update batch tally
+            if (!batchTally[pickerName]) {
+                batchTally[pickerName] = 0;
+            }
+            batchTally[pickerName]++;
             
             // Save to Firebase
             addRecord('harvestRecords', record).then(success => {
                 if (success) {
                     currentBatchCrates++;
                     updateBatchPill();
+                    updateBatchTallyDisplay();
                     
-                    showToast(`Captured! Picker: ${record.picker_id}`);
+                    showToast(`✓ ${pickerName}`);
                     
-                    // Immediately resume scanning for next crate
-                    resumeScanning();
+                    // Remove flash effect after 500ms
+                    setTimeout(() => {
+                        overlay.classList.remove('flash');
+                        content.classList.remove('frozen');
+                        
+                        // Resume scanning for next crate
+                        resumeScanning();
+                    }, 500);
+                } else {
+                    // Remove flash effect immediately if save failed
+                    overlay.classList.remove('flash');
+                    content.classList.remove('frozen');
                 }
             });
+        }
+        
+        function updateBatchTallyDisplay() {
+            const container = document.getElementById('batchTallyContainer');
+            const list = document.getElementById('batchTallyList');
+            
+            // Show container if we have any tallies
+            if (Object.keys(batchTally).length > 0) {
+                container.style.display = 'block';
+                
+                // Sort by picker name
+                const sorted = Object.entries(batchTally).sort((a, b) => a[0].localeCompare(b[0]));
+                
+                // Build HTML
+                list.innerHTML = sorted.map(([picker, count]) => 
+                    `<div style="padding: 3px 0;">${picker}: ${count}</div>`
+                ).join('');
+            } else {
+                container.style.display = 'none';
+            }
         }
         
         function resumeScanning() {
@@ -2452,10 +2539,6 @@
             };
         }
         
-        function moreCrates() {
-            resumeScanning();
-        }
-        
         function completeBatch() {
             const currentBatch = getFromStorage('currentBatchId', 1);
             const records = getFromStorage('harvestRecords', []);
@@ -2468,6 +2551,10 @@
                 closeScanner();
                 return;
             }
+            
+            // Reset batch tally
+            batchTally = {};
+            updateBatchTallyDisplay();
             
             // Count crates per picker
             const pickerCounts = {};
