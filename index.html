@@ -531,6 +531,119 @@
             margin-top: 10px;
         }
         
+        /* Print styles for Zebra ZD621 - 90mm x 60mm stickers */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            
+            .sticker-grid, .sticker-grid * {
+                visibility: visible;
+            }
+            
+            .sticker-grid {
+                position: absolute;
+                left: 0;
+                top: 0;
+                display: block;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .sticker {
+                width: 90mm;
+                height: 60mm;
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+                page-break-after: always;
+                page-break-inside: avoid;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: white;
+            }
+            
+            .sticker:last-child {
+                page-break-after: auto;
+            }
+            
+            .sticker-qr {
+                margin: 5mm auto 3mm auto;
+            }
+            
+            .sticker-qr img {
+                width: 40mm !important;
+                height: 40mm !important;
+            }
+            
+            .sticker-name {
+                font-size: 16pt;
+                font-weight: bold;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .sticker > div:last-child {
+                display: none; /* Hide employee ID in print */
+            }
+            
+            @page {
+                size: 90mm 60mm;
+                margin: 0;
+            }
+        }
+        
+        /* Print styles for employee report PDF */
+        @media print {
+            /* When printing, check if we're on the employee report screen */
+            body.printing-report * {
+                visibility: hidden;
+            }
+            
+            body.printing-report #reportPreview,
+            body.printing-report #reportPreview * {
+                visibility: visible;
+            }
+            
+            body.printing-report #reportPreview {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 20px;
+                box-shadow: none;
+                background: white;
+            }
+            
+            body.printing-report .btn-group {
+                display: none !important;
+            }
+            
+            /* Ensure tables print properly */
+            table {
+                page-break-inside: auto;
+            }
+            
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            
+            thead {
+                display: table-header-group;
+            }
+            
+            /* Reset page size for normal PDF */
+            @page {
+                size: A4;
+                margin: 15mm;
+            }
+        }
+        
         /* Tables */
         .table-container {
             overflow-x: auto;
@@ -822,6 +935,15 @@
             </select>
         </div>
         
+        <div class="form-group">
+            <label for="scanGrade">Grade</label>
+            <select id="scanGrade">
+                <option value="">No Grade</option>
+                <option value="First">First</option>
+                <option value="Second">Second</option>
+            </select>
+        </div>
+        
         <div class="btn-group">
             <button class="btn btn-success" onclick="startScanning()">📷 Start Scanning</button>
         </div>
@@ -943,6 +1065,10 @@
             <div class="tile" onclick="navigateToScreen('timeRecordsScreen')">
                 <div class="emoji">📋</div>
                 <div>View Time Records</div>
+            </div>
+            <div class="tile" onclick="navigateToScreen('employeeReportScreen')">
+                <div class="emoji">📊</div>
+                <div>Generate Report</div>
             </div>
         </div>
     </div>
@@ -1098,18 +1224,87 @@
     <div class="screen" id="timeRecordsScreen">
         <h2 style="margin-bottom: 20px;">Time Records</h2>
         
-        <div class="filters">
-            <div class="filter-row">
-                <select id="timeRecordsFilter" onchange="loadTimeRecords()">
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                    <option value="all">All Time</option>
-                </select>
+        <div class="filters" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <select id="timeRecordsFilter" onchange="toggleTimeRecordsDateFilter(); loadTimeRecords()" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+                <option value="range">Date Range</option>
+                <option value="all">All Time</option>
+            </select>
+            <div id="timeRecordsDateRangeInputs" style="display: none; gap: 10px; align-items: center;">
+                <input type="date" id="timeRecordsDateFrom" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px;">
+                <span style="padding: 5px;">to</span>
+                <input type="date" id="timeRecordsDateTo" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px;">
+                <button class="btn btn-primary" onclick="loadTimeRecords()" style="padding: 10px 20px;">Apply</button>
             </div>
         </div>
         
         <div id="timeRecordsContainer"></div>
+    </div>
+    
+    <!-- Employee Report Screen -->
+    <div class="screen" id="employeeReportScreen">
+        <h2 style="margin-bottom: 20px;">Employee Report</h2>
+        
+        <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+            <div class="form-group">
+                <label>Date Range *</label>
+                <select id="reportDateRange" onchange="toggleReportDateRange()">
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="range">Custom Range</option>
+                </select>
+            </div>
+            
+            <div id="reportDateRangeInputs" style="display: none; margin-bottom: 15px;">
+                <div class="form-group">
+                    <label>From Date</label>
+                    <input type="date" id="reportDateFrom">
+                </div>
+                <div class="form-group">
+                    <label>To Date</label>
+                    <input type="date" id="reportDateTo">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Fruit Type *</label>
+                <select id="reportFruit">
+                    <option value="strawberries">Strawberries</option>
+                    <option value="raspberries">Raspberries</option>
+                    <option value="boysenberries">Boysenberries</option>
+                    <option value="karakaberries">Karaka Berries</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Grade</label>
+                <select id="reportGrade">
+                    <option value="">All Grades</option>
+                    <option value="First">First</option>
+                    <option value="Second">Second</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Select Employees *</label>
+                <div id="reportEmployeesList" style="max-height: 200px; overflow-y: auto; border: 2px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9;">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-success" onclick="generateEmployeeReport()">📊 Generate Report</button>
+            </div>
+        </div>
+        
+        <div id="reportPreview" style="display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <!-- Report will be displayed here -->
+        </div>
     </div>
     
     <!-- Records Screen -->
@@ -1197,6 +1392,7 @@
                         <th class="sortable" onclick="sortRecords('total_punnets')">Punnets</th>
                         <th class="sortable" onclick="sortRecords('total_weight_kg')">Weight (kg)</th>
                         <th>Partial</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="recordsTableBody">
@@ -1207,6 +1403,60 @@
         
         <div class="summary-card" id="recordsSummary" style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 20px;">
             <!-- Summary will be populated here -->
+        </div>
+    </div>
+    
+    <!-- Edit Harvest Record Modal -->
+    <div id="editHarvestRecordModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; overflow-y: auto;">
+        <div style="background: white; max-width: 600px; margin: 50px auto; border-radius: 12px; padding: 30px; position: relative;">
+            <h2 style="margin-bottom: 20px;">Edit Harvest Record</h2>
+            <button onclick="closeEditHarvestRecordModal()" style="position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">✕</button>
+            
+            <div class="form-group">
+                <label>Picker *</label>
+                <select id="editHarvestPicker" required></select>
+            </div>
+            
+            <div class="form-group">
+                <label>Variety *</label>
+                <select id="editHarvestVariety" required></select>
+            </div>
+            
+            <div class="form-group">
+                <label>Block *</label>
+                <select id="editHarvestBlock" required></select>
+            </div>
+            
+            <div class="form-group">
+                <label>Size *</label>
+                <select id="editHarvestSize" required></select>
+            </div>
+            
+            <div class="form-group">
+                <label>Grade</label>
+                <select id="editHarvestGrade">
+                    <option value="">No Grade</option>
+                    <option value="First">First</option>
+                    <option value="Second">Second</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Crate Count *</label>
+                <input type="number" id="editHarvestCrateCount" min="0" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Punnets *</label>
+                <input type="number" id="editHarvestPunnets" min="0" required>
+            </div>
+            
+            <input type="hidden" id="editHarvestRecordIds">
+            
+            <div class="btn-group">
+                <button class="btn btn-success" onclick="saveEditedHarvestRecord()">💾 Save Changes</button>
+                <button class="btn btn-secondary" onclick="closeEditHarvestRecordModal()">Cancel</button>
+            </div>
         </div>
     </div>
     
@@ -1613,6 +1863,9 @@
                     break;
                 case 'employeeListScreen':
                     loadEmployeeList();
+                    break;
+                case 'employeeReportScreen':
+                    loadEmployeeReportScreen();
                     break;
             }
         }
@@ -2223,6 +2476,7 @@
         let detectedCode = null;
         let scanPaused = false;
         let batchTally = {}; // Track crates per picker in current batch
+        let detectionTimeout = null; // Timer for auto-resume scanning
         
         document.getElementById('partialCrate').addEventListener('change', function() {
             const punnetsInput = document.getElementById('manualPunnets');
@@ -2355,17 +2609,19 @@
             const variety = document.getElementById('scanVariety').value;
             const block = document.getElementById('scanBlock').value;
             const size = document.getElementById('scanSize').value;
+            const grade = document.getElementById('scanGrade').value;
             
             if (!variety || !block || !size) {
                 showToast('Please select variety, block, and size');
                 return;
             }
             
-            // Save scan context
+            // Save scan context including grade
             const context = {
                 variety: variety,
                 block: block,
-                size: size
+                size: size,
+                grade: grade || '' // Include grade, empty string if not selected
             };
             saveToStorage('scanContext', context);
             
@@ -2438,10 +2694,27 @@
             if (navigator.vibrate) {
                 navigator.vibrate(100);
             }
+            
+            // Clear any existing timeout
+            if (detectionTimeout) {
+                clearTimeout(detectionTimeout);
+            }
+            
+            // Auto-resume scanning after 3 seconds if capture button not pressed
+            detectionTimeout = setTimeout(() => {
+                console.log('⏰ Auto-resuming scanner - capture not pressed in time');
+                resumeScanning();
+            }, 3000);
         }
         
         function captureCode() {
             if (!detectedCode) return;
+            
+            // Clear auto-resume timeout since user pressed capture
+            if (detectionTimeout) {
+                clearTimeout(detectionTimeout);
+                detectionTimeout = null;
+            }
             
             // Add flash effect (force browser reflow to restart animation)
             const overlay = document.getElementById('scannerOverlay');
@@ -2546,6 +2819,12 @@
         }
         
         function resumeScanning() {
+            // Clear any pending auto-resume timeout
+            if (detectionTimeout) {
+                clearTimeout(detectionTimeout);
+                detectionTimeout = null;
+            }
+            
             detectedCode = null;
             scanPaused = false;
             document.getElementById('scannerStatus').textContent = 'Ready to scan...';
@@ -2620,12 +2899,14 @@
                 variety: context.variety,
                 block: context.block,
                 size: context.size,
+                grade: context.grade || '', // Include grade from context
                 punnets_per_crate: sizeSettings.punnetsPerCrate,
                 punnet_weight_g: sizeSettings.punnetWeightG,
                 is_partial: isPartial,
                 partial_punnets: partialPunnets,
                 total_punnets: totalPunnets,
                 total_weight_kg: totalWeightKg,
+                crate_count: 1, // Each scan = 1 crate
                 scan_raw: parsed.scan_raw
             };
         }
@@ -2738,6 +3019,12 @@
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
                 currentStream = null;
+            }
+            
+            // Clear any pending auto-resume timeout
+            if (detectionTimeout) {
+                clearTimeout(detectionTimeout);
+                detectionTimeout = null;
             }
             
             // Close overlay
@@ -3152,7 +3439,10 @@
             
             select.innerHTML = '<option value="">Select Employee</option>';
             
-            employees.forEach(emp => {
+            // Filter to only show current (active) employees
+            const currentEmployees = employees.filter(emp => emp.current !== false);
+            
+            currentEmployees.forEach(emp => {
                 const option = document.createElement('option');
                 option.value = emp.id;
                 option.textContent = `${emp.name} (${emp.id})`;
@@ -3215,19 +3505,38 @@
             showToast('Stickers generated! Click Print to print.');
         }
         
+        function toggleTimeRecordsDateFilter() {
+            const filter = document.getElementById('timeRecordsFilter').value;
+            const rangeInputs = document.getElementById('timeRecordsDateRangeInputs');
+            
+            if (filter === 'range') {
+                rangeInputs.style.display = 'flex';
+            } else {
+                rangeInputs.style.display = 'none';
+            }
+        }
+        
         function loadTimeRecords() {
             const filter = document.getElementById('timeRecordsFilter').value;
             const timeRecords = getFromStorage('timeRecords', []);
+            const employees = getFromStorage('employees', []);
             const container = document.getElementById('timeRecordsContainer');
             
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             
+            // Filter by date range
             const filtered = timeRecords.filter(record => {
                 const recordDate = new Date(record.timestamp);
                 
                 if (filter === 'today') {
-                    return recordDate >= today;
+                    const recordDay = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate());
+                    return recordDay.getTime() === today.getTime();
+                } else if (filter === 'yesterday') {
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const recordDay = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate());
+                    return recordDay.getTime() === yesterday.getTime();
                 } else if (filter === 'week') {
                     const weekAgo = new Date(today);
                     weekAgo.setDate(weekAgo.getDate() - 7);
@@ -3235,6 +3544,17 @@
                 } else if (filter === 'month') {
                     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
                     return recordDate >= monthStart;
+                } else if (filter === 'range') {
+                    const fromDate = document.getElementById('timeRecordsDateFrom').value;
+                    const toDate = document.getElementById('timeRecordsDateTo').value;
+                    if (fromDate && toDate) {
+                        const from = new Date(fromDate);
+                        from.setHours(0, 0, 0, 0);
+                        const to = new Date(toDate);
+                        to.setHours(23, 59, 59, 999);
+                        return recordDate >= from && recordDate <= to;
+                    }
+                    return true;
                 }
                 return true;
             });
@@ -3244,24 +3564,365 @@
                 return;
             }
             
+            // Group records by employee and date
+            const grouped = {};
+            filtered.forEach(record => {
+                const recordDate = new Date(record.timestamp);
+                const dateKey = recordDate.toLocaleDateString('en-NZ');
+                const key = `${record.employee_id}_${dateKey}`;
+                
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        employee_id: record.employee_id,
+                        employee_name: record.employee_name,
+                        date: dateKey,
+                        dateObj: new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate()),
+                        clockIn: null,
+                        clockOut: null,
+                        clockInRecord: null,
+                        clockOutRecord: null
+                    };
+                }
+                
+                if (record.action === 'in') {
+                    if (!grouped[key].clockIn || new Date(record.timestamp) < new Date(grouped[key].clockIn)) {
+                        grouped[key].clockIn = record.timestamp;
+                        grouped[key].clockInRecord = record;
+                    }
+                } else if (record.action === 'out') {
+                    if (!grouped[key].clockOut || new Date(record.timestamp) > new Date(grouped[key].clockOut)) {
+                        grouped[key].clockOut = record.timestamp;
+                        grouped[key].clockOutRecord = record;
+                    }
+                }
+            });
+            
+            // Convert to array and sort by date desc, then employee name
+            const consolidatedRecords = Object.values(grouped).sort((a, b) => {
+                const dateDiff = b.dateObj - a.dateObj;
+                if (dateDiff !== 0) return dateDiff;
+                return a.employee_name.localeCompare(b.employee_name);
+            });
+            
+            // Calculate hours worked
+            consolidatedRecords.forEach(record => {
+                if (record.clockIn && record.clockOut) {
+                    const inTime = new Date(record.clockIn);
+                    const outTime = new Date(record.clockOut);
+                    const hours = (outTime - inTime) / (1000 * 60 * 60);
+                    record.hoursWorked = hours.toFixed(2);
+                } else {
+                    record.hoursWorked = '-';
+                }
+            });
+            
             let html = '<div class="table-container"><table><thead><tr>';
-            html += '<th>Date/Time</th>';
+            html += '<th>Date</th>';
             html += '<th>Employee</th>';
-            html += '<th>Action</th>';
-            html += '<th>Photo</th>';
+            html += '<th>Clock In</th>';
+            html += '<th>Clock Out</th>';
+            html += '<th>Hours Worked</th>';
+            html += '<th>Actions</th>';
             html += '</tr></thead><tbody>';
             
-            filtered.reverse().forEach(record => {
+            consolidatedRecords.forEach(record => {
                 html += '<tr>';
-                html += `<td>${formatDate(record.timestamp)}</td>`;
+                html += `<td>${record.date}</td>`;
                 html += `<td>${record.employee_name}</td>`;
-                html += `<td>${record.action === 'in' ? '✅ Clock In' : '🚪 Clock Out'}</td>`;
-                html += `<td>${record.photo ? '<img src="' + record.photo + '" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">' : '-'}</td>`;
+                html += `<td>${record.clockIn ? formatTime(record.clockIn) : '-'}</td>`;
+                html += `<td>${record.clockOut ? formatTime(record.clockOut) : '-'}</td>`;
+                html += `<td>${record.hoursWorked}</td>`;
+                html += `<td><button class="btn btn-primary" onclick='editTimeRecord(${JSON.stringify(record).replace(/'/g, "&apos;")})' style="padding: 5px 10px; font-size: 14px;">Edit</button></td>`;
                 html += '</tr>';
             });
             
             html += '</tbody></table></div>';
             container.innerHTML = html;
+        }
+        
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString('en-NZ', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        function editTimeRecord(record) {
+            // Show edit modal - to be implemented
+            showToast('Time record editing coming soon!');
+            console.log('Edit record:', record);
+        }
+        
+        // ============= EMPLOYEE REPORT SCREEN =============
+        function loadEmployeeReportScreen() {
+            const employees = getFromStorage('employees', []).filter(emp => emp.current !== false);
+            const container = document.getElementById('reportEmployeesList');
+            
+            container.innerHTML = `
+                <div style="margin-bottom: 10px;">
+                    <label><input type="checkbox" id="selectAllEmployees" onchange="toggleAllEmployees()"> <strong>Select All</strong></label>
+                </div>
+            `;
+            
+            employees.forEach(emp => {
+                container.innerHTML += `
+                    <div style="margin: 5px 0;">
+                        <label><input type="checkbox" class="report-employee-checkbox" value="${emp.id}"> ${emp.name} (${emp.id})</label>
+                    </div>
+                `;
+            });
+        }
+        
+        function toggleReportDateRange() {
+            const range = document.getElementById('reportDateRange').value;
+            const inputs = document.getElementById('reportDateRangeInputs');
+            inputs.style.display = range === 'range' ? 'block' : 'none';
+        }
+        
+        function toggleAllEmployees() {
+            const selectAll = document.getElementById('selectAllEmployees').checked;
+            document.querySelectorAll('.report-employee-checkbox').forEach(cb => cb.checked = selectAll);
+        }
+        
+        async function generateEmployeeReport() {
+            const dateRange = document.getElementById('reportDateRange').value;
+            const fruit = document.getElementById('reportFruit').value;
+            const grade = document.getElementById('reportGrade').value;
+            const selectedEmployees = Array.from(document.querySelectorAll('.report-employee-checkbox:checked')).map(cb => cb.value);
+            
+            if (selectedEmployees.length === 0) {
+                showToast('Please select at least one employee');
+                return;
+            }
+            
+            // Get date range
+            let fromDate, toDate;
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            if (dateRange === 'today') {
+                fromDate = today;
+                toDate = new Date(today);
+                toDate.setHours(23, 59, 59, 999);
+            } else if (dateRange === 'yesterday') {
+                fromDate = new Date(today);
+                fromDate.setDate(fromDate.getDate() - 1);
+                toDate = new Date(fromDate);
+                toDate.setHours(23, 59, 59, 999);
+            } else if (dateRange === 'week') {
+                fromDate = new Date(today);
+                fromDate.setDate(fromDate.getDate() - 7);
+                toDate = new Date(now);
+            } else if (dateRange === 'month') {
+                fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                toDate = new Date(now);
+            } else if (dateRange === 'range') {
+                const from = document.getElementById('reportDateFrom').value;
+                const to = document.getElementById('reportDateTo').value;
+                if (!from || !to) {
+                    showToast('Please select date range');
+                    return;
+                }
+                fromDate = new Date(from);
+                toDate = new Date(to);
+                toDate.setHours(23, 59, 59, 999);
+            }
+            
+            // Get harvest records from fruit-specific collection
+            const fruitRecordsKey = `${fruit}_harvestRecords`;
+            const allFruitRecords = window.firebaseCache?.[fruitRecordsKey] || [];
+            console.log(`📊 Loading records from ${fruitRecordsKey}:`, allFruitRecords.length, 'records found');
+            
+            const harvestRecords = allFruitRecords.filter(r => {
+                const recordDate = new Date(r.timestamp);
+                const matchDate = recordDate >= fromDate && recordDate <= toDate;
+                const matchEmployee = selectedEmployees.includes(r.picker_id);
+                const matchGrade = !grade || r.grade === grade;
+                return matchDate && matchEmployee && matchGrade;
+            });
+            
+            console.log(`✅ Filtered to ${harvestRecords.length} records matching criteria`);
+            
+            // Get time records
+            const timeRecords = getFromStorage('timeRecords', []).filter(r => {
+                const recordDate = new Date(r.timestamp);
+                return recordDate >= fromDate && recordDate <= toDate && selectedEmployees.includes(r.employee_id);
+            });
+            
+            // Calculate stats per employee per day
+            const employeeStats = {};
+            const employees = getFromStorage('employees', []);
+            
+            selectedEmployees.forEach(empId => {
+                employeeStats[empId] = {
+                    name: employees.find(e => e.id === empId)?.name || empId,
+                    days: {}
+                };
+            });
+            
+            // Group harvest records by employee and date
+            harvestRecords.forEach(record => {
+                const date = new Date(record.timestamp).toLocaleDateString('en-NZ');
+                if (!employeeStats[record.picker_id].days[date]) {
+                    employeeStats[record.picker_id].days[date] = {
+                        crates: 0,
+                        punnets: 0,
+                        hours: 0
+                    };
+                }
+                employeeStats[record.picker_id].days[date].crates += record.crate_count || 0;
+                employeeStats[record.picker_id].days[date].punnets += record.total_punnets || 0;
+            });
+            
+            // Group time records by employee and date
+            const timeByEmployeeDate = {};
+            timeRecords.forEach(record => {
+                const dateKey = new Date(record.timestamp).toLocaleDateString('en-NZ');
+                const key = `${record.employee_id}_${dateKey}`;
+                if (!timeByEmployeeDate[key]) {
+                    timeByEmployeeDate[key] = { clockIn: null, clockOut: null };
+                }
+                if (record.action === 'in') {
+                    if (!timeByEmployeeDate[key].clockIn || new Date(record.timestamp) < new Date(timeByEmployeeDate[key].clockIn)) {
+                        timeByEmployeeDate[key].clockIn = record.timestamp;
+                    }
+                }
+                if (record.action === 'out') {
+                    if (!timeByEmployeeDate[key].clockOut || new Date(record.timestamp) > new Date(timeByEmployeeDate[key].clockOut)) {
+                        timeByEmployeeDate[key].clockOut = record.timestamp;
+                    }
+                }
+            });
+            
+            // Calculate hours worked
+            Object.keys(timeByEmployeeDate).forEach(key => {
+                const [empId, date] = key.split('_');
+                const times = timeByEmployeeDate[key];
+                if (times.clockIn && times.clockOut) {
+                    const hours = (new Date(times.clockOut) - new Date(times.clockIn)) / (1000 * 60 * 60);
+                    if (employeeStats[empId] && employeeStats[empId].days[date]) {
+                        employeeStats[empId].days[date].hours = hours;
+                    } else if (employeeStats[empId]) {
+                        employeeStats[empId].days[date] = { crates: 0, punnets: 0, hours: hours };
+                    }
+                }
+            });
+            
+            // Generate HTML report
+            displayReportHTML(employeeStats, fromDate, toDate, fruit, grade);
+        }
+        
+        function displayReportHTML(stats, fromDate, toDate, fruit, grade) {
+            const preview = document.getElementById('reportPreview');
+            const dateStr = `${fromDate.toLocaleDateString('en-NZ')} to ${toDate.toLocaleDateString('en-NZ')}`;
+            
+            let html = `
+                <div style="margin-bottom: 20px; text-align: center;">
+                    <h2>Employee Harvest Report</h2>
+                    <p><strong>Period:</strong> ${dateStr}</p>
+                    <p><strong>Fruit:</strong> ${fruit.charAt(0).toUpperCase() + fruit.slice(1)}</p>
+                    ${grade ? `<p><strong>Grade:</strong> ${grade}</p>` : ''}
+                </div>
+                <div class="btn-group" style="margin-bottom: 20px;">
+                    <button class="btn btn-primary" onclick="downloadReportPDF()">📥 Download PDF</button>
+                </div>
+            `;
+            
+            let grandTotalHours = 0;
+            let grandTotalCrates = 0;
+            let grandTotalPunnets = 0;
+            
+            Object.keys(stats).forEach(empId => {
+                const emp = stats[empId];
+                const days = Object.keys(emp.days).sort();
+                
+                if (days.length === 0) return;
+                
+                let empTotalHours = 0;
+                let empTotalCrates = 0;
+                let empTotalPunnets = 0;
+                
+                html += `
+                    <div style="margin-bottom: 30px; page-break-inside: avoid;">
+                        <h3 style="background: #6b8e23; color: white; padding: 10px; border-radius: 8px;">${emp.name}</h3>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                            <thead>
+                                <tr style="background: #f0f0f0;">
+                                    <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Date</th>
+                                    <th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Hours</th>
+                                    <th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Crates</th>
+                                    <th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Punnets</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                days.forEach(date => {
+                    const day = emp.days[date];
+                    empTotalHours += day.hours;
+                    empTotalCrates += day.crates;
+                    empTotalPunnets += day.punnets;
+                    
+                    html += `
+                        <tr>
+                            <td style="padding: 8px; border: 1px solid #ddd;">${date}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${day.hours.toFixed(2)}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${day.crates}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${day.punnets}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            <tr style="background: #e8f5e9; font-weight: bold;">
+                                <td style="padding: 8px; border: 1px solid #ddd;">Subtotal</td>
+                                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${empTotalHours.toFixed(2)}</td>
+                                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${empTotalCrates}</td>
+                                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${empTotalPunnets}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    </div>
+                `;
+                
+                grandTotalHours += empTotalHours;
+                grandTotalCrates += empTotalCrates;
+                grandTotalPunnets += empTotalPunnets;
+            });
+            
+            html += `
+                <div style="margin-top: 30px; padding: 15px; background: #2c3e50; color: white; border-radius: 8px; page-break-inside: avoid;">
+                    <h3 style="margin-bottom: 10px;">Grand Total</h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center;">
+                        <div>
+                            <div style="font-size: 24px; font-weight: bold;">${grandTotalHours.toFixed(2)}</div>
+                            <div style="font-size: 14px; opacity: 0.9;">Hours</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 24px; font-weight: bold;">${grandTotalCrates}</div>
+                            <div style="font-size: 14px; opacity: 0.9;">Crates</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 24px; font-weight: bold;">${grandTotalPunnets}</div>
+                            <div style="font-size: 14px; opacity: 0.9;">Punnets</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            preview.innerHTML = html;
+            preview.style.display = 'block';
+        }
+        
+        function downloadReportPDF() {
+            // Add class to body for print styling
+            document.body.classList.add('printing-report');
+            
+            // Trigger print
+            window.print();
+            
+            // Remove class after print dialog closes
+            setTimeout(() => {
+                document.body.classList.remove('printing-report');
+            }, 1000);
         }
         
         // ============= RECORDS SCREEN =============
@@ -3480,7 +4141,7 @@
             tbody.innerHTML = '';
             
             if (consolidatedRecords.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; color: #666;">No records found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; color: #666;">No records found</td></tr>';
             } else {
                 const employees = getFromStorage('employees', []);
                 
@@ -3503,6 +4164,7 @@
                         <td>${record.total_punnets}</td>
                         <td>${record.total_weight_kg.toFixed(2)}</td>
                         <td class="${record.is_partial ? 'partial' : ''}">${record.is_partial ? 'Yes' : 'No'}</td>
+                        <td><button class="btn btn-primary" onclick='editHarvestRecord(${JSON.stringify(record).replace(/'/g, "&apos;")})' style="padding: 5px 10px; font-size: 14px;">Edit</button></td>
                     `;
                 });
             }
@@ -3586,6 +4248,138 @@
             }
         }
         
+        
+        function editHarvestRecord(record) {
+            console.log('Editing harvest record:', record);
+            
+            // Populate dropdowns
+            const employees = getFromStorage('employees', []);
+            const varieties = getFromStorage('varieties', []);
+            const blocks = getFromStorage('blocks', []);
+            const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            
+            // Populate picker dropdown
+            const pickerSelect = document.getElementById('editHarvestPicker');
+            pickerSelect.innerHTML = '<option value="">Select Picker</option>';
+            employees.forEach(emp => {
+                pickerSelect.innerHTML += `<option value="${emp.id}" ${emp.id === record.picker_id ? 'selected' : ''}>${emp.name}</option>`;
+            });
+            
+            // Populate variety dropdown
+            const varietySelect = document.getElementById('editHarvestVariety');
+            varietySelect.innerHTML = '<option value="">Select Variety</option>';
+            const varietyNames = varieties.map(v => typeof v === 'string' ? v : v.name);
+            varietyNames.forEach(v => {
+                varietySelect.innerHTML += `<option value="${v}" ${v === record.variety ? 'selected' : ''}>${v}</option>`;
+            });
+            
+            // Populate block dropdown
+            const blockSelect = document.getElementById('editHarvestBlock');
+            blockSelect.innerHTML = '<option value="">Select Block</option>';
+            const blockNames = blocks.map(b => typeof b === 'string' ? b : b.name);
+            blockNames.forEach(b => {
+                blockSelect.innerHTML += `<option value="${b}" ${b === record.block ? 'selected' : ''}>${b}</option>`;
+            });
+            
+            // Populate size dropdown
+            const sizeSelect = document.getElementById('editHarvestSize');
+            sizeSelect.innerHTML = '<option value="">Select Size</option>';
+            Object.keys(punnetSettings).forEach(s => {
+                sizeSelect.innerHTML += `<option value="${s}" ${s === record.size ? 'selected' : ''}>${s}</option>`;
+            });
+            
+            // Set grade
+            document.getElementById('editHarvestGrade').value = record.grade || '';
+            
+            // Set crate count and punnets
+            document.getElementById('editHarvestCrateCount').value = record.crate_count;
+            document.getElementById('editHarvestPunnets').value = record.total_punnets;
+            
+            // Store record IDs for updating
+            document.getElementById('editHarvestRecordIds').value = record.record_ids.join(',');
+            
+            // Show modal
+            document.getElementById('editHarvestRecordModal').style.display = 'block';
+        }
+        
+        function closeEditHarvestRecordModal() {
+            document.getElementById('editHarvestRecordModal').style.display = 'none';
+        }
+        
+        async function saveEditedHarvestRecord() {
+            const recordIds = document.getElementById('editHarvestRecordIds').value.split(',');
+            const picker_id = document.getElementById('editHarvestPicker').value;
+            const variety = document.getElementById('editHarvestVariety').value;
+            const block = document.getElementById('editHarvestBlock').value;
+            const size = document.getElementById('editHarvestSize').value;
+            const grade = document.getElementById('editHarvestGrade').value;
+            const crate_count = parseInt(document.getElementById('editHarvestCrateCount').value);
+            const total_punnets = parseInt(document.getElementById('editHarvestPunnets').value);
+            
+            if (!picker_id || !variety || !block || !size || !crate_count || !total_punnets) {
+                showToast('Please fill in all required fields');
+                return;
+            }
+            
+            // Get all records
+            const allRecords = getFromStorage('harvestRecords', []);
+            
+            // Find records to update
+            const recordsToUpdate = allRecords.filter(r => recordIds.includes(String(r.id)));
+            
+            if (recordsToUpdate.length === 0) {
+                showToast('Records not found');
+                closeEditHarvestRecordModal();
+                return;
+            }
+            
+            // Calculate punnet weight
+            const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            const sizeSettings = punnetSettings[size] || { punnetsPerCrate: 20, punnetWeightG: 400 };
+            const total_weight_kg = (total_punnets * sizeSettings.punnetWeightG) / 1000;
+            
+            // Update each record proportionally
+            const cratesPerRecord = crate_count / recordsToUpdate.length;
+            const punnetsPerRecord = Math.floor(total_punnets / recordsToUpdate.length);
+            
+            // Update records in Firebase
+            for (const record of recordsToUpdate) {
+                const updatedRecord = {
+                    ...record,
+                    picker_id: picker_id,
+                    variety: variety,
+                    block: block,
+                    size: size,
+                    grade: grade,
+                    crate_count: Math.round(cratesPerRecord),
+                    total_punnets: punnetsPerRecord,
+                    total_weight_kg: (punnetsPerRecord * sizeSettings.punnetWeightG) / 1000
+                };
+                
+                if (record.firestoreId) {
+                    // Determine collection
+                    const fruitRecords = window.firebaseCache?.[`${currentFruit}_harvestRecords`] || [];
+                    const isInFruitCollection = fruitRecords.some(r => r.firestoreId === record.firestoreId);
+                    
+                    const collectionName = isInFruitCollection ? `${currentFruit}_harvestRecords` : 'harvestRecords';
+                    
+                    try {
+                        await db.collection(collectionName).doc(record.firestoreId).update(updatedRecord);
+                        console.log(`✅ Updated record ${record.firestoreId} in ${collectionName}`);
+                    } catch (error) {
+                        console.error('Update error:', error);
+                    }
+                }
+            }
+            
+            showToast('Records updated successfully');
+            closeEditHarvestRecordModal();
+            
+            // Reload page to show updated records
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }
         
         function exportCSV() {
             const records = getFromStorage('harvestRecords', []);
