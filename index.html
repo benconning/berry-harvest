@@ -533,6 +533,12 @@
         
         /* Print styles for Zebra ZD621 - 90mm x 60mm stickers */
         @media print {
+            /* Default to sticker printing when sticker-grid exists */
+            body:has(.sticker-grid) {
+                width: 90mm;
+                height: 60mm;
+            }
+            
             body * {
                 visibility: hidden;
             }
@@ -555,7 +561,7 @@
                 height: 60mm;
                 border: none;
                 border-radius: 0;
-                padding: 2mm;
+                padding: 4mm 4mm;
                 margin: 0;
                 page-break-after: always;
                 page-break-inside: avoid;
@@ -571,39 +577,47 @@
             }
             
             .sticker-qr {
-                margin: 0 auto 1mm auto;
+                margin: 0 auto 3mm auto;
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                flex-shrink: 0;
             }
             
             .sticker-qr img {
-                width: 35mm !important;
-                height: 35mm !important;
+                width: 45mm !important;
+                height: 45mm !important;
                 display: block;
             }
             
             .sticker-qr canvas {
-                width: 35mm !important;
-                height: 35mm !important;
+                width: 45mm !important;
+                height: 45mm !important;
                 display: block;
             }
             
             .sticker-name {
-                font-size: 16pt;
+                font-size: 14pt;
                 font-weight: bold;
                 margin: 0;
                 padding: 0;
                 text-align: center;
+                flex-shrink: 0;
             }
             
             .sticker > div:last-child {
                 display: none; /* Hide employee ID in print */
             }
             
+            body {
+                width: 90mm;
+                height: 60mm;
+            }
+            
             @page {
                 size: 90mm 60mm;
                 margin: 0;
+                padding: 0;
             }
         }
         
@@ -648,8 +662,13 @@
                 display: table-header-group;
             }
             
-            /* Reset page size for normal PDF */
-            @page {
+            /* A4 page size for reports only */
+            body.printing-report {
+                width: auto;
+                height: auto;
+            }
+            
+            @page :not(.sticker-page) {
                 size: A4;
                 margin: 15mm;
             }
