@@ -555,7 +555,7 @@
                 height: 60mm;
                 border: none;
                 border-radius: 0;
-                padding: 0;
+                padding: 3mm;
                 margin: 0;
                 page-break-after: always;
                 page-break-inside: avoid;
@@ -571,19 +571,30 @@
             }
             
             .sticker-qr {
-                margin: 5mm auto 3mm auto;
+                margin: 0 auto 2mm auto;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
             
             .sticker-qr img {
-                width: 40mm !important;
-                height: 40mm !important;
+                width: 48mm !important;
+                height: 48mm !important;
+                display: block;
+            }
+            
+            .sticker-qr canvas {
+                width: 48mm !important;
+                height: 48mm !important;
+                display: block;
             }
             
             .sticker-name {
-                font-size: 16pt;
+                font-size: 18pt;
                 font-weight: bold;
                 margin: 0;
                 padding: 0;
+                text-align: center;
             }
             
             .sticker > div:last-child {
@@ -3493,11 +3504,11 @@
                 sticker.appendChild(idDiv);
                 grid.appendChild(sticker);
                 
-                // Generate QR code
+                // Generate QR code - larger size for better print quality
                 new QRCode(qrDiv, {
                     text: employee.qrCode,
-                    width: 128,
-                    height: 128
+                    width: 256,
+                    height: 256
                 });
             }
             
