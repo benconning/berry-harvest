@@ -307,20 +307,20 @@
             left: 0;
             right: 0;
             background: rgba(0,0,0,0.8);
-            padding: 20px;
+            padding: 12px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 8px;
         }
         
         .scanner-status {
             color: white;
             text-align: center;
-            font-size: 16px;
-            padding: 10px;
+            font-size: 14px;
+            padding: 8px;
             background: rgba(0,0,0,0.5);
             border-radius: 8px;
-            min-height: 50px;
+            min-height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -329,26 +329,26 @@
         .partial-crate-container {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             color: white;
             background: rgba(255,255,255,0.1);
-            padding: 10px;
+            padding: 8px;
             border-radius: 8px;
         }
         
         .partial-crate-container input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
         }
         
         .partial-crate-container input[type="number"] {
-            width: 80px;
-            padding: 8px;
+            width: 70px;
+            padding: 6px;
         }
         
         .capture-button {
-            width: 80px;
-            height: 80px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
             background: white;
             border: 4px solid #4a90e2;
@@ -357,7 +357,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 30px;
+            font-size: 24px;
             transition: all 0.3s;
         }
         
@@ -378,7 +378,7 @@
         
         .scanner-actions .btn {
             flex: 1;
-            min-height: 50px;
+            min-height: 42px;
         }
         
         /* Flash effect for capture */
@@ -1053,9 +1053,9 @@
                 <div class="scanner-status" id="scannerStatus">Initializing camera...</div>
                 
                 <!-- Batch Tally List -->
-                <div id="batchTallyContainer" style="background: rgba(74, 144, 226, 0.95); border: 2px solid #fff; border-radius: 12px; padding: 15px; margin: 10px 0; max-height: 200px; overflow-y: auto; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-                    <div style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 8px; text-align: center;">📊 Batch Tally</div>
-                    <div id="batchTallyList" style="color: #fff; font-size: 15px; font-weight: 600;">
+                <div id="batchTallyContainer" style="background: rgba(74, 144, 226, 0.95); border: 2px solid #fff; border-radius: 10px; padding: 10px; margin: 8px 0; max-height: 150px; overflow-y: auto; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    <div style="color: #fff; font-size: 14px; font-weight: 700; margin-bottom: 6px; text-align: center;">📊 Batch Tally</div>
+                    <div id="batchTallyList" style="color: #fff; font-size: 13px; font-weight: 600;">
                         <!-- Will be populated dynamically -->
                     </div>
                 </div>
@@ -1272,6 +1272,35 @@
         </div>
         
         <div id="timeRecordsContainer"></div>
+    </div>
+    
+    <!-- Edit Time Record Modal -->
+    <div class="modal" id="editTimeRecordModal">
+        <div class="modal-content">
+            <h3>Edit Time Record</h3>
+            <div id="editTimeRecordForm">
+                <div class="form-group">
+                    <label>Employee</label>
+                    <input type="text" id="editEmployeeName" disabled style="background: #f5f5f5;">
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="text" id="editRecordDate" disabled style="background: #f5f5f5;">
+                </div>
+                <div class="form-group">
+                    <label>Clock In Time</label>
+                    <input type="time" id="editClockInTime">
+                </div>
+                <div class="form-group">
+                    <label>Clock Out Time</label>
+                    <input type="time" id="editClockOutTime">
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="closeEditTimeRecordModal()">Cancel</button>
+                    <button class="btn btn-success" onclick="saveTimeRecordEdit()">Save Changes</button>
+                </div>
+            </div>
+        </div>
     </div>
     
     <!-- Employee Report Screen -->
@@ -3676,9 +3705,98 @@
         }
         
         function editTimeRecord(record) {
-            // Show edit modal - to be implemented
-            showToast('Time record editing coming soon!');
-            console.log('Edit record:', record);
+            // Store the record being edited
+            window.editingTimeRecord = record;
+            
+            // Populate the form
+            document.getElementById('editEmployeeName').value = record.employee_name;
+            document.getElementById('editRecordDate').value = record.date;
+            
+            // Set clock in time
+            if (record.clockIn) {
+                const clockInDate = new Date(record.clockIn);
+                const clockInTime = clockInDate.toTimeString().slice(0, 5);
+                document.getElementById('editClockInTime').value = clockInTime;
+            } else {
+                document.getElementById('editClockInTime').value = '';
+            }
+            
+            // Set clock out time
+            if (record.clockOut) {
+                const clockOutDate = new Date(record.clockOut);
+                const clockOutTime = clockOutDate.toTimeString().slice(0, 5);
+                document.getElementById('editClockOutTime').value = clockOutTime;
+            } else {
+                document.getElementById('editClockOutTime').value = '';
+            }
+            
+            // Show modal
+            document.getElementById('editTimeRecordModal').classList.add('active');
+        }
+        
+        function closeEditTimeRecordModal() {
+            document.getElementById('editTimeRecordModal').classList.remove('active');
+            window.editingTimeRecord = null;
+        }
+        
+        function saveTimeRecordEdit() {
+            const record = window.editingTimeRecord;
+            if (!record) return;
+            
+            const newClockInTime = document.getElementById('editClockInTime').value;
+            const newClockOutTime = document.getElementById('editClockOutTime').value;
+            
+            if (!newClockInTime && !newClockOutTime) {
+                showToast('Please enter at least one time');
+                return;
+            }
+            
+            // Get all time records
+            const timeRecords = getFromStorage('timeRecords', []);
+            
+            // Update clock in record if it exists and time changed
+            if (record.clockInRecord && newClockInTime) {
+                const originalDate = new Date(record.clockInRecord.timestamp);
+                const [hours, minutes] = newClockInTime.split(':');
+                const newDate = new Date(originalDate);
+                newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                
+                const recordIndex = timeRecords.findIndex(r => 
+                    r.timestamp === record.clockInRecord.timestamp && 
+                    r.employee_id === record.employee_id
+                );
+                
+                if (recordIndex !== -1) {
+                    timeRecords[recordIndex].timestamp = newDate.toISOString();
+                }
+            }
+            
+            // Update clock out record if it exists and time changed
+            if (record.clockOutRecord && newClockOutTime) {
+                const originalDate = new Date(record.clockOutRecord.timestamp);
+                const [hours, minutes] = newClockOutTime.split(':');
+                const newDate = new Date(originalDate);
+                newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                
+                const recordIndex = timeRecords.findIndex(r => 
+                    r.timestamp === record.clockOutRecord.timestamp && 
+                    r.employee_id === record.employee_id
+                );
+                
+                if (recordIndex !== -1) {
+                    timeRecords[recordIndex].timestamp = newDate.toISOString();
+                }
+            }
+            
+            // Save to storage
+            saveToStorage('timeRecords', timeRecords);
+            
+            // Sync to Firebase
+            syncTimeRecordsToFirebase();
+            
+            showToast('Time record updated successfully!');
+            closeEditTimeRecordModal();
+            loadTimeRecords();
         }
         
         // ============= EMPLOYEE REPORT SCREEN =============
