@@ -535,21 +535,17 @@
         
         /* Print styles for Zebra ZD621 - 90mm x 60mm stickers */
         @media print {
-            /* Default to sticker printing when sticker-grid exists */
-            body:has(.sticker-grid) {
-                width: 90mm;
-                height: 60mm;
-            }
-            
-            body * {
+            /* Only apply sticker styles when explicitly printing stickers */
+            body.printing-stickers * {
                 visibility: hidden;
             }
             
-            .sticker-grid, .sticker-grid * {
+            body.printing-stickers .sticker-grid,
+            body.printing-stickers .sticker-grid * {
                 visibility: visible;
             }
             
-            .sticker-grid {
+            body.printing-stickers .sticker-grid {
                 position: absolute;
                 left: 0;
                 top: 0;
@@ -558,7 +554,7 @@
                 padding: 0;
             }
             
-            .sticker {
+            body.printing-stickers .sticker {
                 width: 90mm;
                 height: 60mm;
                 border: none;
@@ -574,11 +570,11 @@
                 background: white;
             }
             
-            .sticker:last-child {
+            body.printing-stickers .sticker:last-child {
                 page-break-after: auto;
             }
             
-            .sticker-qr {
+            body.printing-stickers .sticker-qr {
                 margin: 0 auto 3mm auto;
                 display: flex;
                 align-items: center;
@@ -586,19 +582,19 @@
                 flex-shrink: 0;
             }
             
-            .sticker-qr img {
+            body.printing-stickers .sticker-qr img {
                 width: 45mm !important;
                 height: 45mm !important;
                 display: block;
             }
             
-            .sticker-qr canvas {
+            body.printing-stickers .sticker-qr canvas {
                 width: 45mm !important;
                 height: 45mm !important;
                 display: block;
             }
             
-            .sticker-name {
+            body.printing-stickers .sticker-name {
                 font-size: 14pt;
                 font-weight: bold;
                 margin: 0;
@@ -607,17 +603,16 @@
                 flex-shrink: 0;
             }
             
-            .sticker > div:last-child {
+            body.printing-stickers .sticker > div:last-child {
                 display: none; /* Hide employee ID in print */
             }
             
-            /* Sticker-specific body size */
-            body:has(.sticker-grid) {
+            /* Sticker page size - only when printing stickers */
+            body.printing-stickers {
                 width: 90mm;
                 height: 60mm;
             }
             
-            /* Sticker page size */
             @page {
                 size: 90mm 60mm;
                 margin: 0;
@@ -670,6 +665,11 @@
             body.printing-report {
                 width: auto;
                 height: auto;
+            }
+            
+            @page {
+                size: A4 portrait;
+                margin: 15mm;
             }
         }
         
@@ -2754,7 +2754,14 @@
             const parsed = parseQRCode(code);
             const employees = getFromStorage('employees', []);
             const employee = employees.find(emp => emp.id === parsed.picker_id);
-            const displayName = employee ? employee.name : 'Unknown Employee';
+            
+            // Debug logging
+            console.log('🔍 Scanned code:', code);
+            console.log('🔍 Parsed picker_id:', parsed.picker_id);
+            console.log('👥 Available employees:', employees.map(e => ({ id: e.id, name: e.name })));
+            console.log('✅ Found employee:', employee);
+            
+            const displayName = employee ? employee.name : `Unknown (${parsed.picker_id})`;
             
             statusElement.textContent = `Detected: ${displayName} - Tap Capture`;
             captureButton.disabled = false;
@@ -2814,7 +2821,7 @@
             const employee = employees.find(emp => emp.id === record.picker_id);
             console.log('✅ Found employee:', employee);
             
-            const pickerName = employee ? employee.name : 'Unknown Employee';
+            const pickerName = employee ? employee.name : `Unknown (${record.picker_id})`;
             console.log('🏷️ Using picker name:', pickerName);
             
             // Update batch tally
