@@ -315,15 +315,17 @@
         
         .scanner-status {
             color: white;
-            text-align: center;
-            font-size: 14px;
-            padding: 8px;
-            background: rgba(0,0,0,0.5);
+            text-align: left;
+            font-size: 13px;
+            padding: 8px 10px;
+            background: rgba(0,0,0,0.7);
             border-radius: 8px;
             min-height: 40px;
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
+            max-width: 60%;
+            margin-right: auto;
         }
         
         .partial-crate-container {
@@ -609,11 +611,13 @@
                 display: none; /* Hide employee ID in print */
             }
             
-            body {
+            /* Sticker-specific body size */
+            body:has(.sticker-grid) {
                 width: 90mm;
                 height: 60mm;
             }
             
+            /* Sticker page size */
             @page {
                 size: 90mm 60mm;
                 margin: 0;
@@ -662,15 +666,10 @@
                 display: table-header-group;
             }
             
-            /* A4 page size for reports only */
+            /* A4 page size for reports */
             body.printing-report {
                 width: auto;
                 height: auto;
-            }
-            
-            @page :not(.sticker-page) {
-                size: A4;
-                margin: 15mm;
             }
         }
         
@@ -1050,8 +1049,6 @@
         <div class="scanner-content">
             <video id="preview"></video>
             <div class="scanner-controls">
-                <div class="scanner-status" id="scannerStatus">Initializing camera...</div>
-                
                 <!-- Batch Tally List -->
                 <div id="batchTallyContainer" style="background: rgba(74, 144, 226, 0.95); border: 2px solid #fff; border-radius: 10px; padding: 10px; margin: 8px 0; max-height: 150px; overflow-y: auto; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
                     <div style="color: #fff; font-size: 14px; font-weight: 700; margin-bottom: 6px; text-align: center;">📊 Batch Tally</div>
@@ -1065,7 +1062,13 @@
                     <label for="partialCrate" style="color: white; margin: 0;">Partial crate</label>
                     <input type="number" id="manualPunnets" min="1" max="50" placeholder="Punnets" style="display: none;">
                 </div>
-                <button class="capture-button" id="captureButton" onclick="captureCode()" disabled>📷</button>
+                
+                <!-- Status and Capture Button Row -->
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="scanner-status" id="scannerStatus">Initializing camera...</div>
+                    <button class="capture-button" id="captureButton" onclick="captureCode()" disabled>📷</button>
+                </div>
+                
                 <div class="scanner-actions">
                     <button class="btn btn-success" onclick="completeBatch()" style="width: 100%;">✅ Complete Batch</button>
                 </div>
@@ -1244,7 +1247,7 @@
         
         <div class="btn-group">
             <button class="btn btn-primary" onclick="generateStickers()">Generate Stickers</button>
-            <button class="btn btn-success" onclick="window.print()" style="display: none;" id="printBtn">🖨️ Print</button>
+            <button class="btn btn-success" onclick="printStickers()" style="display: none;" id="printBtn">🖨️ Print</button>
         </div>
         
         <div id="stickerPreview"></div>
@@ -2747,7 +2750,13 @@
             const statusElement = document.getElementById('scannerStatus');
             const captureButton = document.getElementById('captureButton');
             
-            statusElement.textContent = `Detected: ${code.substring(0, 50)}${code.length > 50 ? '...' : ''} - Tap Capture`;
+            // Get employee name from QR code
+            const parsed = parseQRCode(code);
+            const employees = getFromStorage('employees', []);
+            const employee = employees.find(emp => emp.id === parsed.picker_id);
+            const displayName = employee ? employee.name : 'Unknown Employee';
+            
+            statusElement.textContent = `Detected: ${displayName} - Tap Capture`;
             captureButton.disabled = false;
             
             if (navigator.vibrate) {
@@ -2805,7 +2814,7 @@
             const employee = employees.find(emp => emp.id === record.picker_id);
             console.log('✅ Found employee:', employee);
             
-            const pickerName = employee ? employee.name : record.picker_id;
+            const pickerName = employee ? employee.name : 'Unknown Employee';
             console.log('🏷️ Using picker name:', pickerName);
             
             // Update batch tally
@@ -3564,6 +3573,19 @@
             showToast('Stickers generated! Click Print to print.');
         }
         
+        function printStickers() {
+            // Add class to body for sticker print styling
+            document.body.classList.add('printing-stickers');
+            
+            // Trigger print
+            window.print();
+            
+            // Remove class after print dialog closes
+            setTimeout(() => {
+                document.body.classList.remove('printing-stickers');
+            }, 1000);
+        }
+        
         function toggleTimeRecordsDateFilter() {
             const filter = document.getElementById('timeRecordsFilter').value;
             const rangeInputs = document.getElementById('timeRecordsDateRangeInputs');
@@ -3684,19 +3706,30 @@
             html += '<th>Actions</th>';
             html += '</tr></thead><tbody>';
             
-            consolidatedRecords.forEach(record => {
+            consolidatedRecords.forEach((record, index) => {
                 html += '<tr>';
                 html += `<td>${record.date}</td>`;
                 html += `<td>${record.employee_name}</td>`;
                 html += `<td>${record.clockIn ? formatTime(record.clockIn) : '-'}</td>`;
                 html += `<td>${record.clockOut ? formatTime(record.clockOut) : '-'}</td>`;
                 html += `<td>${record.hoursWorked}</td>`;
-                html += `<td><button class="btn btn-primary" onclick='editTimeRecord(${JSON.stringify(record).replace(/'/g, "&apos;")})' style="padding: 5px 10px; font-size: 14px;">Edit</button></td>`;
+                html += `<td><button class="btn btn-primary" onclick='editTimeRecordByIndex(${index})' style="padding: 5px 10px; font-size: 14px;">Edit</button></td>`;
                 html += '</tr>';
             });
             
             html += '</tbody></table></div>';
             container.innerHTML = html;
+            
+            // Store consolidated records globally for editing
+            window.consolidatedTimeRecords = consolidatedRecords;
+        }
+        
+        function editTimeRecordByIndex(index) {
+            if (!window.consolidatedTimeRecords || !window.consolidatedTimeRecords[index]) {
+                showToast('Record not found');
+                return;
+            }
+            editTimeRecord(window.consolidatedTimeRecords[index]);
         }
         
         function formatTime(timestamp) {
@@ -3753,6 +3786,7 @@
             
             // Get all time records
             const timeRecords = getFromStorage('timeRecords', []);
+            let updated = false;
             
             // Update clock in record if it exists and time changed
             if (record.clockInRecord && newClockInTime) {
@@ -3762,12 +3796,14 @@
                 newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
                 
                 const recordIndex = timeRecords.findIndex(r => 
-                    r.timestamp === record.clockInRecord.timestamp && 
-                    r.employee_id === record.employee_id
+                    r.id === record.clockInRecord.id
                 );
                 
                 if (recordIndex !== -1) {
                     timeRecords[recordIndex].timestamp = newDate.toISOString();
+                    // Update in Firebase
+                    updateRecord('timeRecords', record.clockInRecord.id, { timestamp: newDate.toISOString() });
+                    updated = true;
                 }
             }
             
@@ -3779,24 +3815,26 @@
                 newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
                 
                 const recordIndex = timeRecords.findIndex(r => 
-                    r.timestamp === record.clockOutRecord.timestamp && 
-                    r.employee_id === record.employee_id
+                    r.id === record.clockOutRecord.id
                 );
                 
                 if (recordIndex !== -1) {
                     timeRecords[recordIndex].timestamp = newDate.toISOString();
+                    // Update in Firebase
+                    updateRecord('timeRecords', record.clockOutRecord.id, { timestamp: newDate.toISOString() });
+                    updated = true;
                 }
             }
             
-            // Save to storage
-            saveToStorage('timeRecords', timeRecords);
-            
-            // Sync to Firebase
-            syncTimeRecordsToFirebase();
-            
-            showToast('Time record updated successfully!');
-            closeEditTimeRecordModal();
-            loadTimeRecords();
+            if (updated) {
+                // Save to storage
+                saveToStorage('timeRecords', timeRecords);
+                showToast('Time record updated successfully!');
+                closeEditTimeRecordModal();
+                loadTimeRecords();
+            } else {
+                showToast('No changes made');
+            }
         }
         
         // ============= EMPLOYEE REPORT SCREEN =============
