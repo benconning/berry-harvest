@@ -638,7 +638,7 @@
                 top: 0;
                 width: 100%;
                 margin: 0;
-                padding: 20px;
+                padding: 5px;
                 box-shadow: none;
                 background: white;
             }
@@ -669,7 +669,7 @@
             
             @page {
                 size: A4 portrait;
-                margin: 15mm;
+                margin: 10mm;
             }
         }
         
@@ -4008,13 +4008,13 @@
             const dateStr = `${fromDate.toLocaleDateString('en-NZ')} to ${toDate.toLocaleDateString('en-NZ')}`;
             
             let html = `
-                <div style="margin-bottom: 20px; text-align: center;">
-                    <h2>Employee Harvest Report</h2>
-                    <p><strong>Period:</strong> ${dateStr}</p>
-                    <p><strong>Fruit:</strong> ${fruit.charAt(0).toUpperCase() + fruit.slice(1)}</p>
-                    ${grade ? `<p><strong>Grade:</strong> ${grade}</p>` : ''}
+                <div style="margin-bottom: 10px; text-align: center;">
+                    <h2 style="margin: 0 0 5px 0; font-size: 18px;">Employee Harvest Report</h2>
+                    <p style="margin: 2px 0; font-size: 12px;"><strong>Period:</strong> ${dateStr}</p>
+                    <p style="margin: 2px 0; font-size: 12px;"><strong>Fruit:</strong> ${fruit.charAt(0).toUpperCase() + fruit.slice(1)}</p>
+                    ${grade ? `<p style="margin: 2px 0; font-size: 12px;"><strong>Grade:</strong> ${grade}</p>` : ''}
                 </div>
-                <div class="btn-group" style="margin-bottom: 20px;">
+                <div class="btn-group" style="margin-bottom: 10px;">
                     <button class="btn btn-primary" onclick="downloadReportPDF()">📥 Download PDF</button>
                 </div>
             `;
@@ -4034,15 +4034,15 @@
                 let empTotalPunnets = 0;
                 
                 html += `
-                    <div style="margin-bottom: 30px; page-break-inside: avoid;">
-                        <h3 style="background: #6b8e23; color: white; padding: 10px; border-radius: 8px;">${emp.name}</h3>
-                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                    <div style="margin-bottom: 15px; page-break-inside: avoid;">
+                        <h3 style="background: #6b8e23; color: white; padding: 4px 8px; border-radius: 4px; font-size: 14px; margin: 0 0 5px 0;">${emp.name}</h3>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 11px;">
                             <thead>
                                 <tr style="background: #f0f0f0;">
-                                    <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Date</th>
-                                    <th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Hours</th>
-                                    <th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Crates</th>
-                                    <th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Punnets</th>
+                                    <th style="padding: 3px 5px; border: 1px solid #ddd; text-align: left;">Date</th>
+                                    <th style="padding: 3px 5px; border: 1px solid #ddd; text-align: right;">Hours</th>
+                                    <th style="padding: 3px 5px; border: 1px solid #ddd; text-align: right;">Crates</th>
+                                    <th style="padding: 3px 5px; border: 1px solid #ddd; text-align: right;">Punnets</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -4056,20 +4056,20 @@
                     
                     html += `
                         <tr>
-                            <td style="padding: 8px; border: 1px solid #ddd;">${date}</td>
-                            <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${day.hours.toFixed(2)}</td>
-                            <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${day.crates}</td>
-                            <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${day.punnets}</td>
+                            <td style="padding: 2px 5px; border: 1px solid #ddd;">${date}</td>
+                            <td style="padding: 2px 5px; border: 1px solid #ddd; text-align: right;">${day.hours.toFixed(2)}</td>
+                            <td style="padding: 2px 5px; border: 1px solid #ddd; text-align: right;">${day.crates}</td>
+                            <td style="padding: 2px 5px; border: 1px solid #ddd; text-align: right;">${day.punnets}</td>
                         </tr>
                     `;
                 });
                 
                 html += `
                             <tr style="background: #e8f5e9; font-weight: bold;">
-                                <td style="padding: 8px; border: 1px solid #ddd;">Subtotal</td>
-                                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${empTotalHours.toFixed(2)}</td>
-                                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${empTotalCrates}</td>
-                                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${empTotalPunnets}</td>
+                                <td style="padding: 2px 5px; border: 1px solid #ddd;">Subtotal</td>
+                                <td style="padding: 2px 5px; border: 1px solid #ddd; text-align: right;">${empTotalHours.toFixed(2)}</td>
+                                <td style="padding: 2px 5px; border: 1px solid #ddd; text-align: right;">${empTotalCrates}</td>
+                                <td style="padding: 2px 5px; border: 1px solid #ddd; text-align: right;">${empTotalPunnets}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -4082,20 +4082,20 @@
             });
             
             html += `
-                <div style="margin-top: 30px; padding: 15px; background: #2c3e50; color: white; border-radius: 8px; page-break-inside: avoid;">
-                    <h3 style="margin-bottom: 10px;">Grand Total</h3>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center;">
+                <div style="margin-top: 15px; padding: 8px; background: #2c3e50; color: white; border-radius: 4px; page-break-inside: avoid;">
+                    <h3 style="margin: 0 0 5px 0; font-size: 14px;">Grand Total</h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
                         <div>
-                            <div style="font-size: 24px; font-weight: bold;">${grandTotalHours.toFixed(2)}</div>
-                            <div style="font-size: 14px; opacity: 0.9;">Hours</div>
+                            <div style="font-size: 18px; font-weight: bold;">${grandTotalHours.toFixed(2)}</div>
+                            <div style="font-size: 11px; opacity: 0.9;">Hours</div>
                         </div>
                         <div>
-                            <div style="font-size: 24px; font-weight: bold;">${grandTotalCrates}</div>
-                            <div style="font-size: 14px; opacity: 0.9;">Crates</div>
+                            <div style="font-size: 18px; font-weight: bold;">${grandTotalCrates}</div>
+                            <div style="font-size: 11px; opacity: 0.9;">Crates</div>
                         </div>
                         <div>
-                            <div style="font-size: 24px; font-weight: bold;">${grandTotalPunnets}</div>
-                            <div style="font-size: 14px; opacity: 0.9;">Punnets</div>
+                            <div style="font-size: 18px; font-weight: bold;">${grandTotalPunnets}</div>
+                            <div style="font-size: 11px; opacity: 0.9;">Punnets</div>
                         </div>
                     </div>
                 </div>
