@@ -612,12 +612,6 @@
                 width: 90mm;
                 height: 60mm;
             }
-            
-            @page {
-                size: 90mm 60mm;
-                margin: 0;
-                padding: 0;
-            }
         }
         
         /* Print styles for employee report PDF */
@@ -3584,12 +3578,28 @@
             // Add class to body for sticker print styling
             document.body.classList.add('printing-stickers');
             
+            // Inject sticker @page style
+            const stickerPageStyle = document.createElement('style');
+            stickerPageStyle.id = 'sticker-page-style';
+            stickerPageStyle.textContent = `
+                @media print {
+                    @page {
+                        size: 90mm 60mm !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+                }
+            `;
+            document.head.appendChild(stickerPageStyle);
+            
             // Trigger print
             window.print();
             
-            // Remove class after print dialog closes
+            // Remove class and style after print dialog closes
             setTimeout(() => {
                 document.body.classList.remove('printing-stickers');
+                const style = document.getElementById('sticker-page-style');
+                if (style) style.remove();
             }, 1000);
         }
         
@@ -4106,6 +4116,10 @@
         }
         
         function downloadReportPDF() {
+            // Remove any sticker page styles
+            const stickerStyle = document.getElementById('sticker-page-style');
+            if (stickerStyle) stickerStyle.remove();
+            
             // Add class to body for print styling
             document.body.classList.add('printing-report');
             
