@@ -1774,6 +1774,34 @@
             });
         }
         
+        function getNZDate() {
+            // Get current time in NZ timezone
+            const nzDateStr = new Date().toLocaleString('en-NZ', { 
+                timeZone: 'Pacific/Auckland',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            
+            // Parse NZ date string (format: "DD/MM/YYYY, HH:mm:ss")
+            const [datePart, timePart] = nzDateStr.split(', ');
+            const [day, month, year] = datePart.split('/');
+            const [hour, minute, second] = timePart.split(':');
+            
+            // Create Date object in NZ time
+            return new Date(year, month - 1, day, hour, minute, second);
+        }
+        
+        function getNZDateOnly() {
+            // Get just the date part (midnight) in NZ timezone
+            const nzDate = getNZDate();
+            return new Date(nzDate.getFullYear(), nzDate.getMonth(), nzDate.getDate());
+        }
+        
         // ============= NAVIGATION STACK =============
         
         function navigateToScreen(screenId) {
@@ -3514,7 +3542,7 @@
             currentEmployees.forEach(emp => {
                 const option = document.createElement('option');
                 option.value = emp.id;
-                option.textContent = `${emp.name} (${emp.id})`;
+                option.textContent = emp.name;
                 select.appendChild(option);
             });
         }
@@ -3620,8 +3648,8 @@
             const employees = getFromStorage('employees', []);
             const container = document.getElementById('timeRecordsContainer');
             
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const now = getNZDate(); // Get current NZ time
+            const today = getNZDateOnly(); // Get today's date at midnight NZ time
             
             // Filter by date range
             const filtered = timeRecords.filter(record => {
@@ -3898,8 +3926,8 @@
             
             // Get date range
             let fromDate, toDate;
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const now = getNZDate(); // Get current NZ time
+            const today = getNZDateOnly(); // Get today's date at midnight NZ time
             
             if (dateRange === 'today') {
                 fromDate = today;
