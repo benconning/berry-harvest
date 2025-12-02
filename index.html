@@ -1375,6 +1375,16 @@
             </div>
             
             <div class="form-group">
+                <label>Punnet Size</label>
+                <select id="reportPunnetSize">
+                    <option value="">All Sizes</option>
+                    <option value="250">250g</option>
+                    <option value="500">500g</option>
+                    <option value="1000">1kg</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
                 <label>Select Employees *</label>
                 <div id="reportEmployeesList" style="max-height: 200px; overflow-y: auto; border: 2px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9;">
                     <!-- Will be populated dynamically -->
@@ -4009,6 +4019,7 @@
             const dateRange = document.getElementById('reportDateRange').value;
             const fruit = document.getElementById('reportFruit').value;
             const grade = document.getElementById('reportGrade').value;
+            const punnetSize = document.getElementById('reportPunnetSize').value;
             const selectedEmployees = Array.from(document.querySelectorAll('.report-employee-checkbox:checked')).map(cb => cb.value);
             
             if (selectedEmployees.length === 0) {
@@ -4059,7 +4070,8 @@
                 const matchDate = recordDate >= fromDate && recordDate <= toDate;
                 const matchEmployee = selectedEmployees.includes(r.picker_id);
                 const matchGrade = !grade || r.grade === grade;
-                return matchDate && matchEmployee && matchGrade;
+                const matchPunnetSize = !punnetSize || r.punnet_size === parseInt(punnetSize);
+                return matchDate && matchEmployee && matchGrade && matchPunnetSize;
             });
             
             console.log(`✅ Filtered to ${harvestRecords.length} records matching criteria`);
@@ -4130,10 +4142,10 @@
             });
             
             // Generate HTML report
-            displayReportHTML(employeeStats, fromDate, toDate, fruit, grade);
+            displayReportHTML(employeeStats, fromDate, toDate, fruit, grade, punnetSize);
         }
         
-        function displayReportHTML(stats, fromDate, toDate, fruit, grade) {
+        function displayReportHTML(stats, fromDate, toDate, fruit, grade, punnetSize) {
             const preview = document.getElementById('reportPreview');
             const dateStr = `${fromDate.toLocaleDateString('en-NZ')} to ${toDate.toLocaleDateString('en-NZ')}`;
             
@@ -4143,6 +4155,7 @@
                     <p style="margin: 2px 0; font-size: 12px;"><strong>Period:</strong> ${dateStr}</p>
                     <p style="margin: 2px 0; font-size: 12px;"><strong>Fruit:</strong> ${fruit.charAt(0).toUpperCase() + fruit.slice(1)}</p>
                     ${grade ? `<p style="margin: 2px 0; font-size: 12px;"><strong>Grade:</strong> ${grade}</p>` : ''}
+                    ${punnetSize ? `<p style="margin: 2px 0; font-size: 12px;"><strong>Punnet Size:</strong> ${punnetSize}g</p>` : ''}
                 </div>
                 <div class="btn-group" style="margin-bottom: 10px;">
                     <button class="btn btn-primary" onclick="downloadReportPDF()">📥 Download PDF</button>
