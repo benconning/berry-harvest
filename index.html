@@ -896,13 +896,41 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <div class="header">
-        <button class="home-btn" onclick="goHome()">🏠</button>
-        <button class="back-btn" onclick="goBack()" style="display: none;" id="backBtn">←</button>
-        <div class="header-title">Connings MGM System</div>
-        <div class="header-spacer"></div>
+    <!-- Login Screen -->
+    <div id="loginScreen" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #6b8e23 0%, #8fbc8f 100%); padding: 20px;">
+        <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); max-width: 400px; width: 100%;">
+            <h1 style="text-align: center; color: #6b8e23; margin-bottom: 30px;">🍓 Connings MGM</h1>
+            
+            <div id="loginForm">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Email</label>
+                    <input type="email" id="loginEmail" placeholder="Enter your email" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Password</label>
+                    <input type="password" id="loginPassword" placeholder="Enter your password" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
+                </div>
+                <button onclick="handleLogin()" style="width: 100%; padding: 15px; background: #6b8e23; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer; margin-bottom: 10px;">
+                    Login
+                </button>
+                <div id="loginError" style="color: red; text-align: center; margin-top: 10px; display: none;"></div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+                <p style="color: #666; font-size: 14px;">Need an account? Contact your administrator</p>
+            </div>
+        </div>
     </div>
+    
+    <!-- Main App (hidden until logged in) -->
+    <div id="mainApp" style="display: none;">
+        <!-- Header -->
+        <div class="header">
+            <button class="home-btn" onclick="goHome()">🏠</button>
+            <button class="back-btn" onclick="goBack()" style="display: none;" id="backBtn">←</button>
+            <div class="header-title">Connings MGM System</div>
+            <button class="home-btn" onclick="handleLogout()" title="Logout" style="background: rgba(255,255,255,0.2);">🚪</button>
+        </div>
     
     <!-- Home Screen -->
     <div class="screen active" id="homeScreen">
@@ -1645,6 +1673,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     
     <script>
         // Firebase Configuration
@@ -1661,6 +1690,7 @@
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const auth = firebase.auth();
         
         // Enable offline persistence
         db.enablePersistence()
@@ -1671,6 +1701,68 @@
                     console.log('Persistence not available');
                 }
             });
+        
+        // ============= AUTHENTICATION =============
+        // Check authentication state on page load
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // User is logged in
+                console.log('User logged in:', user.email);
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+            } else {
+                // User is logged out
+                console.log('User logged out');
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('mainApp').style.display = 'none';
+            }
+        });
+        
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            if (!email || !password) {
+                errorDiv.textContent = 'Please enter email and password';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                errorDiv.style.display = 'none';
+                // onAuthStateChanged will handle showing the main app
+            } catch (error) {
+                console.error('Login error:', error);
+                errorDiv.textContent = 'Invalid email or password';
+                errorDiv.style.display = 'block';
+            }
+        }
+        
+        async function handleLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                try {
+                    await auth.signOut();
+                    // onAuthStateChanged will handle showing the login screen
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    alert('Error logging out');
+                }
+            }
+        }
+        
+        // Allow Enter key to submit login
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginPassword = document.getElementById('loginPassword');
+            if (loginPassword) {
+                loginPassword.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        handleLogin();
+                    }
+                });
+            }
+        });
     </script>
     
     <script>
@@ -5339,5 +5431,6 @@
         }, false);
 
     </script>
+    </div> <!-- End mainApp -->
 </body>
 </html>
