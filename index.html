@@ -4012,21 +4012,16 @@
             // Get punnet settings for this fruit
             const punnetSettings = getFromStorage(`${fruit}_punnetSettings`, getDefaultPunnetSettings());
             
-            // Get unique punnet weights
-            const uniqueSizes = new Set();
-            Object.values(punnetSettings).forEach(setting => {
-                if (setting.punnetWeightG > 0) {
-                    uniqueSizes.add(setting.punnetWeightG);
-                }
-            });
+            // Get size names (Small, Medium, Large, etc.)
+            const sizeNames = Object.keys(punnetSettings).filter(size => 
+                punnetSettings[size].punnetWeightG > 0
+            );
             
-            // Sort sizes
-            const sortedSizes = Array.from(uniqueSizes).sort((a, b) => a - b);
-            
-            // Populate dropdown
+            // Populate dropdown with size names
             punnetSizeSelect.innerHTML = '<option value="">All Sizes</option>';
-            sortedSizes.forEach(size => {
-                punnetSizeSelect.innerHTML += `<option value="${size}">${size}g</option>`;
+            sizeNames.forEach(sizeName => {
+                const weightG = punnetSettings[sizeName].punnetWeightG;
+                punnetSizeSelect.innerHTML += `<option value="${sizeName}">${sizeName} (${weightG}g)</option>`;
             });
         }
         
@@ -4096,7 +4091,7 @@
                 const matchDate = recordDate >= fromDate && recordDate <= toDate;
                 const matchEmployee = selectedEmployees.includes(r.picker_id);
                 const matchGrade = !grade || r.grade === grade;
-                const matchPunnetSize = !punnetSize || r.punnet_size === parseInt(punnetSize);
+                const matchPunnetSize = !punnetSize || r.size === punnetSize;
                 return matchDate && matchEmployee && matchGrade && matchPunnetSize;
             });
             
@@ -4181,7 +4176,7 @@
                     <p style="margin: 2px 0; font-size: 12px;"><strong>Period:</strong> ${dateStr}</p>
                     <p style="margin: 2px 0; font-size: 12px;"><strong>Fruit:</strong> ${fruit.charAt(0).toUpperCase() + fruit.slice(1)}</p>
                     ${grade ? `<p style="margin: 2px 0; font-size: 12px;"><strong>Grade:</strong> ${grade}</p>` : ''}
-                    ${punnetSize ? `<p style="margin: 2px 0; font-size: 12px;"><strong>Punnet Size:</strong> ${punnetSize}g</p>` : ''}
+                    ${punnetSize ? `<p style="margin: 2px 0; font-size: 12px;"><strong>Size:</strong> ${punnetSize}</p>` : ''}
                 </div>
                 <div class="btn-group" style="margin-bottom: 10px;">
                     <button class="btn btn-primary" onclick="downloadReportPDF()">📥 Download PDF</button>
