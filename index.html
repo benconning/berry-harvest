@@ -1357,7 +1357,7 @@
             
             <div class="form-group">
                 <label>Fruit Type *</label>
-                <select id="reportFruit">
+                <select id="reportFruit" onchange="updateReportPunnetSizes()">
                     <option value="strawberries">Strawberries</option>
                     <option value="raspberries">Raspberries</option>
                     <option value="boysenberries">Boysenberries</option>
@@ -1378,9 +1378,7 @@
                 <label>Punnet Size</label>
                 <select id="reportPunnetSize">
                     <option value="">All Sizes</option>
-                    <option value="250">250g</option>
-                    <option value="500">500g</option>
-                    <option value="1000">1kg</option>
+                    <!-- Options populated dynamically based on fruit settings -->
                 </select>
             </div>
             
@@ -4001,6 +3999,34 @@
                         <label><input type="checkbox" class="report-employee-checkbox" value="${emp.id}"> ${emp.name} (${emp.id})</label>
                     </div>
                 `;
+            });
+            
+            // Load punnet sizes for the currently selected fruit
+            updateReportPunnetSizes();
+        }
+        
+        function updateReportPunnetSizes() {
+            const fruit = document.getElementById('reportFruit').value;
+            const punnetSizeSelect = document.getElementById('reportPunnetSize');
+            
+            // Get punnet settings for this fruit
+            const punnetSettings = getFromStorage(`${fruit}_punnetSettings`, getDefaultPunnetSettings());
+            
+            // Get unique punnet weights
+            const uniqueSizes = new Set();
+            Object.values(punnetSettings).forEach(setting => {
+                if (setting.punnetWeightG > 0) {
+                    uniqueSizes.add(setting.punnetWeightG);
+                }
+            });
+            
+            // Sort sizes
+            const sortedSizes = Array.from(uniqueSizes).sort((a, b) => a - b);
+            
+            // Populate dropdown
+            punnetSizeSelect.innerHTML = '<option value="">All Sizes</option>';
+            sortedSizes.forEach(size => {
+                punnetSizeSelect.innerHTML += `<option value="${size}">${size}g</option>`;
             });
         }
         
