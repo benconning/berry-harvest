@@ -2857,6 +2857,9 @@
             // Filter only ACTIVE (current) employees
             const activeEmployees = employeesData.filter(emp => emp.active !== false);
             
+            // Sort alphabetically by name
+            activeEmployees.sort((a, b) => a.name.localeCompare(b.name));
+            
             const pickerSelect = document.getElementById('manualPicker');
             if (pickerSelect && pickerSelect.tagName === 'SELECT') {
                 pickerSelect.innerHTML = '<option value="">Select Picker</option>';
@@ -3675,6 +3678,9 @@
                 return true; // 'all'
             });
             
+            // Sort alphabetically by name
+            filteredEmployees.sort((a, b) => a.name.localeCompare(b.name));
+            
             if (filteredEmployees.length === 0) {
                 container.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No employees found</p>';
                 return;
@@ -3764,6 +3770,10 @@
             const allEmployees = getFromStorage('employees', []);
             // Filter only active employees
             const employees = allEmployees.filter(emp => emp.active !== false);
+            
+            // Sort alphabetically by name
+            employees.sort((a, b) => a.name.localeCompare(b.name));
+            
             const grid = document.getElementById('clockInEmployeeGrid');
             
             grid.innerHTML = '';
@@ -3812,6 +3822,10 @@
             const allEmployees = getFromStorage('employees', []);
             // Filter only active employees
             const employees = allEmployees.filter(emp => emp.active !== false);
+            
+            // Sort alphabetically by name
+            employees.sort((a, b) => a.name.localeCompare(b.name));
+            
             const grid = document.getElementById('clockOutEmployeeGrid');
             
             grid.innerHTML = '';
@@ -3976,7 +3990,10 @@
             select.innerHTML = '<option value="">Select Employee</option>';
             
             // Filter to only show current (active) employees
-            const currentEmployees = employees.filter(emp => emp.current !== false);
+            const currentEmployees = employees.filter(emp => emp.active !== false);
+            
+            // Sort alphabetically by name
+            currentEmployees.sort((a, b) => a.name.localeCompare(b.name));
             
             currentEmployees.forEach(emp => {
                 const option = document.createElement('option');
@@ -4323,7 +4340,11 @@
         
         // ============= EMPLOYEE REPORT SCREEN =============
         function loadEmployeeReportScreen() {
-            const employees = getFromStorage('employees', []).filter(emp => emp.current !== false);
+            const employees = getFromStorage('employees', []).filter(emp => emp.active !== false);
+            
+            // Sort alphabetically by name
+            employees.sort((a, b) => a.name.localeCompare(b.name));
+            
             const container = document.getElementById('reportEmployeesList');
             
             container.innerHTML = `
