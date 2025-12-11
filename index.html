@@ -870,9 +870,6 @@
             margin-bottom: 15px;
             color: #333;
         }
-.backup-indicator.active {
-            display: block;
-        }
         
         @media (max-width: 375px) {
             .header-title {
@@ -927,9 +924,6 @@
     
     <!-- Main App (hidden until logged in) -->
     <div id="mainApp" style="display: none;">
-        <!-- Backup Indicator -->
-        <div class="backup-indicator" id="backupIndicator" style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 8px 12px; border-radius: 20px; font-size: 12px; z-index: 3000; display: none;">💾 Backup saved</div>
-        
         <!-- Header -->
         <div class="header">
             <button class="home-btn" onclick="goHome()">🏠</button>
@@ -961,55 +955,6 @@
                 <div class="emoji">👥</div>
                 <div>Employees</div>
             </div>
-            <div class="tile" style="background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%); border-color: #f39c12; color: white;" onclick="navigateToScreen('backupScreen')">
-                <div class="emoji">💾</div>
-                <div>Backup & Restore</div>
-            </div>
-            <div class="tile" style="background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%); border-color: #f39c12; color: white;" onclick="navigateToScreen('backupScreen')">
-    <div class="emoji">💾</div>
-    <div>Backup & Restore</div>
-</div>
-```
-
----
-
-### **STEP 2: Add Backup Screen HTML**
-
-**Press Ctrl+F and search for:**
-```
-<!-- Backup Screen -->
-    <div class="screen" id="backupScreen">
-        <h2 style="margin-bottom: 20px;">Backup & Restore</h2>
-        
-        <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; padding: 15px; margin: 20px 0;">
-            <h3 style="color: #856404; margin-bottom: 10px;">🛡️ Automatic Backup Protection</h3>
-            <p style="color: #856404; margin: 5px 0; font-size: 14px;">✓ Backups saved every 5 minutes</p>
-            <p style="color: #856404; margin: 5px 0; font-size: 14px;">✓ Backups kept for 7 days</p>
-            <p style="color: #856404; margin: 5px 0; font-size: 14px;">✓ Last backup: <span id="lastBackupTime">Never</span></p>
-        </div>
-        
-        <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
-            <h3 style="margin-bottom: 15px;">📥 Create Backup</h3>
-            <p style="color: #666; margin-bottom: 15px;">Download a backup file of all your data</p>
-            <button class="btn btn-success" onclick="createManualBackup()">💾 Download Backup Now</button>
-        </div>
-        
-        <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
-            <h3 style="margin-bottom: 15px;">📤 Restore from Backup</h3>
-            <p style="color: #666; margin-bottom: 15px;">Upload a backup file to restore your data</p>
-            <input type="file" id="backupFileInput" accept=".json" style="margin-bottom: 15px;">
-            <button class="btn btn-primary" onclick="restoreFromBackup()">📂 Restore Backup</button>
-        </div>
-        
-        <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <h3 style="margin-bottom: 15px;">🔄 Recent Auto-Backups</h3>
-            <div id="autoBackupsList" style="max-height: 300px; overflow-y: auto;">
-                <!-- Will be populated with recent backups -->
-            </div>
-        </div>
-    </div>
-            
-<div class="screen" id="employeeMenuScreen">
         </div>
     </div>
     
@@ -1764,129 +1709,7 @@
                     console.log('Persistence not available');
                 }
             });
-        // ============= BACKUP SYSTEM =============
         
-        let backupInterval = null;
-        
-        function startAutoBackup() {
-            console.log('🔄 Starting auto-backup system...');
-            setTimeout(() => createAutoBackup(), 30000);
-            backupInterval = setInterval(() => createAutoBackup(), 5 * 60 * 1000);
-        }
-        
-        function createAutoBackup() {
-            try {
-                const backupData = {
-                    timestamp: new Date().toISOString(),
-                    version: '1.0',
-                    data: { employees: window.firebaseCache?.['employees'] || [], timeRecords: window.firebaseCache?.['timeRecords'] || [] }
-                };
-                
-                const fruits = ['strawberries', 'raspberries', 'boysenberries', 'karakaBerries'];
-                fruits.forEach(fruit => {
-                    backupData.data[`${fruit}_harvestRecords`] = window.firebaseCache?.[`${fruit}_harvestRecords`] || [];
-                    backupData.data[`${fruit}_varieties`] = window.firebaseCache?.[`${fruit}_varieties`] || [];
-                    backupData.data[`${fruit}_blocks`] = window.firebaseCache?.[`${fruit}_blocks`] || [];
-                    backupData.data[`${fruit}_punnetSettings`] = window.firebaseCache?.[`${fruit}_punnetSettings`] || getDefaultPunnetSettings();
-                    backupData.data[`${fruit}_plantsPerBlock`] = window.firebaseCache?.[`${fruit}_plantsPerBlock`] || {};
-                    backupData.data[`${fruit}_currentBatchId`] = window.firebaseCache?.[`${fruit}_currentBatchId`] || 1;
-                });
-                
-                const backupKey = `backup_${Date.now()}`;
-                localStorage.setItem(backupKey, JSON.stringify(backupData));
-                localStorage.setItem('lastBackupTime', new Date().toISOString());
-                cleanOldBackups();
-                showBackupIndicator('Auto-backup saved');
-                console.log('✅ Auto-backup created:', backupKey);
-                updateLastBackupTime();
-            } catch (error) {
-                console.error('❌ Auto-backup failed:', error);
-            }
-        }
-        
-        function cleanOldBackups() {
-            const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && key.startsWith('backup_')) {
-                    const timestamp = parseInt(key.replace('backup_', ''));
-                    if (timestamp < sevenDaysAgo) localStorage.removeItem(key);
-                }
-            }
-        }
-        
-        function showBackupIndicator(message) {
-            const indicator = document.getElementById('backupIndicator');
-            if (indicator) {
-                indicator.textContent = message;
-                indicator.classList.add('active');
-                setTimeout(() => indicator.classList.remove('active'), 3000);
-            }
-        }
-        
-        function createManualBackup() {
-            try {
-                const backupData = {
-                    timestamp: new Date().toISOString(),
-                    version: '1.0',
-                    type: 'manual',
-                    data: { employees: window.firebaseCache?.['employees'] || [], timeRecords: window.firebaseCache?.['timeRecords'] || [] }
-                };
-                
-                const fruits = ['strawberries', 'raspberries', 'boysenberries', 'karakaBerries'];
-                fruits.forEach(fruit => {
-                    backupData.data[`${fruit}_harvestRecords`] = window.firebaseCache?.[`${fruit}_harvestRecords`] || [];
-                    backupData.data[`${fruit}_varieties`] = window.firebaseCache?.[`${fruit}_varieties`] || [];
-                    backupData.data[`${fruit}_blocks`] = window.firebaseCache?.[`${fruit}_blocks`] || [];
-                    backupData.data[`${fruit}_punnetSettings`] = window.firebaseCache?.[`${fruit}_punnetSettings`] || getDefaultPunnetSettings();
-                    backupData.data[`${fruit}_plantsPerBlock`] = window.firebaseCache?.[`${fruit}_plantsPerBlock`] || {};
-                    backupData.data[`${fruit}_currentBatchId`] = window.firebaseCache?.[`${fruit}_currentBatchId`] || 1;
-                });
-                
-                const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `connings-mgm-backup-${new Date().toISOString().split('T')[0]}.json`;
-                a.click();
-                window.URL.revokeObjectURL(url);
-                showToast('✅ Backup downloaded successfully!');
-            } catch (error) {
-                console.error('❌ Manual backup failed:', error);
-                showToast('❌ Backup failed: ' + error.message);
-            }
-        }
-        
-        function restoreFromBackup() {
-            const fileInput = document.getElementById('backupFileInput');
-            const file = fileInput.files[0];
-            if (!file) { showToast('Please select a backup file'); return; }
-            if (!confirm('⚠️ WARNING: Restoring will overwrite ALL current data. Are you sure?')) return;
-            
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                try {
-                    const backupData = JSON.parse(e.target.result);
-                    console.log('📦 Restoring backup from:', backupData.timestamp);
-                    
-                    if (backupData.data.employees) {
-                        await db.collection('settings').doc('employees').set({
-                            data: backupData.data.employees,
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    }
-                    
-                    if (backupData.data.timeRecords) {
-                        const timeRecordsSnapshot = await db.collection('timeRecords').get();
-                        const batch1 = db.batch();
-                        timeRecordsSnapshot.docs.forEach(doc => batch1.delete(doc.ref));
-                        await batch1.commit();
-                        
-                        const batch2 = db.batch();
-                        backupData.data.timeRecords.forEach(record => {
-                            const ref = db.collection('timeRecords').doc();
-                            const recordCopy = { ...record };
-                            delete recordCopy.firestoreId;
         // ============= AUTHENTICATION =============
         // Check authentication state on page load
         auth.onAuthStateChanged((user) => {
@@ -1895,20 +1718,11 @@
                 console.log('User logged in:', user.email);
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'block';
-                // START AUTO-BACKUP SYSTEM
-                startAutoBackup();
-                
             } else {
                 // User is logged out
                 console.log('User logged out');
                 document.getElementById('loginScreen').style.display = 'flex';
                 document.getElementById('mainApp').style.display = 'none';
-                // STOP AUTO-BACKUP
-                if (window.backupInterval) {
-                    clearInterval(window.backupInterval);
-                    window.backupInterval = null;
-                }
-                
             }
         });
         
@@ -2170,9 +1984,7 @@
                 'clockInScreen': 'Clock In',
                 'clockOutScreen': 'Clock Out',
                 'printStickersScreen': 'Print Stickers',
-'timeRecordsScreen': 'Time Records',
-            'backupScreen': 'Backup & Restore'
-                
+                'timeRecordsScreen': 'Time Records'
             };
             
             const headerTitle = document.querySelector('.header-title');
@@ -2239,11 +2051,6 @@
                 case 'employeeReportScreen':
                     loadEmployeeReportScreen();
                     break;
-
-                    case 'backupScreen':
-                updateLastBackupTime();
-                loadAutoBackupsList();
-                break;
             }
         }
         
