@@ -1132,6 +1132,9 @@
             <h3>Auto-Backup Status</h3>
             <p>Last backup: <strong id="lastBackupTime">Never</strong></p>
             <p style="color: #666; font-size: 14px;">Auto-backups run every 5 minutes and are kept for 7 days</p>
+            <p style="color: #e67e22; font-size: 13px; margin-top: 10px;">
+                ℹ️ Auto-backups include employees, time records, and settings only (harvest records are backed up manually to save space)
+            </p>
         </div>
         
         <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
@@ -1782,16 +1785,17 @@
                 const backupData = {
                     timestamp: new Date().toISOString(),
                     version: '1.0',
+                    type: 'auto',
                     data: {
                         employees: window.firebaseCache?.['employees'] || [],
                         timeRecords: window.firebaseCache?.['timeRecords'] || []
                     }
                 };
                 
-                // Add all fruit-specific data
+                // Add only settings (NOT harvest records - too large!)
                 const fruits = ['strawberries', 'raspberries', 'boysenberries', 'karakaBerries'];
                 fruits.forEach(fruit => {
-                    backupData.data[`${fruit}_harvestRecords`] = window.firebaseCache?.[`${fruit}_harvestRecords`] || [];
+                    // Skip harvest records for auto-backup (they're large and safe in Firebase)
                     backupData.data[`${fruit}_varieties`] = window.firebaseCache?.[`${fruit}_varieties`] || [];
                     backupData.data[`${fruit}_blocks`] = window.firebaseCache?.[`${fruit}_blocks`] || [];
                     backupData.data[`${fruit}_punnetSettings`] = window.firebaseCache?.[`${fruit}_punnetSettings`] || getDefaultPunnetSettings();
