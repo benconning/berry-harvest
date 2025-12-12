@@ -3605,9 +3605,18 @@
                 return;
             }
             
-            // Generate unique employee ID
+            // Generate unique employee ID - find next available number
             const employees = getFromStorage('employees', []);
-            const employeeId = 'EMP' + String(employees.length + 1).padStart(3, '0');
+            
+            // Extract all existing employee numbers
+            const existingNumbers = employees.map(emp => {
+                const match = emp.id.match(/^EMP(\d+)$/);
+                return match ? parseInt(match[1]) : 0;
+            }).filter(num => num > 0);
+            
+            // Find the highest number and add 1
+            const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+            const employeeId = 'EMP' + String(nextNumber).padStart(3, '0');
             
             // Show QR code preview
             const qrPreview = document.getElementById('qrCodePreview');
