@@ -4392,17 +4392,18 @@
             // Restore original fruit
             currentFruit = originalFruit;
             
-            // Get size names that are active
+            // Get size names that are active (include Frozen even though weight is 0)
             const sizeNames = Object.keys(punnetSettings).filter(size => {
                 const settings = punnetSettings[size];
-                return settings.active !== false && settings.punnetWeightG > 0;
+                return settings.active !== false;
             });
             
             // Populate dropdown with size names
             punnetSizeSelect.innerHTML = '<option value="">All Sizes</option>';
             sizeNames.forEach(sizeName => {
                 const weightG = punnetSettings[sizeName].punnetWeightG;
-                punnetSizeSelect.innerHTML += `<option value="${sizeName}">${sizeName} (${weightG}g)</option>`;
+                const displayText = weightG > 0 ? `${sizeName} (${weightG}g)` : sizeName;
+                punnetSizeSelect.innerHTML += `<option value="${sizeName}">${displayText}</option>`;
             });
         }
         
