@@ -4382,13 +4382,21 @@
             const fruit = document.getElementById('reportFruit').value;
             const punnetSizeSelect = document.getElementById('reportPunnetSize');
             
-            // Get punnet settings for this fruit
-            const punnetSettings = getFromStorage(`${fruit}_punnetSettings`, getDefaultPunnetSettings());
+            // IMPORTANT: Must set currentFruit temporarily to load correct settings
+            const originalFruit = currentFruit;
+            currentFruit = fruit;
             
-            // Get size names (Small, Medium, Large, etc.)
-            const sizeNames = Object.keys(punnetSettings).filter(size => 
-                punnetSettings[size].punnetWeightG > 0
-            );
+            // Get punnet settings for this fruit
+            const punnetSettings = getFromStorage('punnetSettings', getDefaultPunnetSettings());
+            
+            // Restore original fruit
+            currentFruit = originalFruit;
+            
+            // Get size names that are active
+            const sizeNames = Object.keys(punnetSettings).filter(size => {
+                const settings = punnetSettings[size];
+                return settings.active !== false && settings.punnetWeightG > 0;
+            });
             
             // Populate dropdown with size names
             punnetSizeSelect.innerHTML = '<option value="">All Sizes</option>';
@@ -4494,11 +4502,13 @@
                     employeeStats[record.picker_id].days[date] = {
                         crates: 0,
                         punnets: 0,
+                        kg: 0,
                         hours: 0
                     };
                 }
                 employeeStats[record.picker_id].days[date].crates += record.crate_count || 0;
                 employeeStats[record.picker_id].days[date].punnets += record.total_punnets || 0;
+                employeeStats[record.picker_id].days[date].kg += record.total_weight_kg || 0;
             });
             
             // Group time records by employee and date
@@ -4530,7 +4540,7 @@
                     if (employeeStats[empId] && employeeStats[empId].days[date]) {
                         employeeStats[empId].days[date].hours = hours;
                     } else if (employeeStats[empId]) {
-                        employeeStats[empId].days[date] = { crates: 0, punnets: 0, hours: hours };
+                        employeeStats[empId].days[date] = { crates: 0, punnets: 0, kg: 0, hours: hours };
                     }
                 }
             });
@@ -4559,6 +4569,7 @@
             let grandTotalHours = 0;
             let grandTotalCrates = 0;
             let grandTotalPunnets = 0;
+            let grandTotalKg = 0;
             
             Object.keys(stats).forEach(empId => {
                 const emp = stats[empId];
@@ -4569,6 +4580,7 @@
                 let empTotalHours = 0;
                 let empTotalCrates = 0;
                 let empTotalPunnets = 0;
+                let empTotalKg = 0;
                 
                 html += `
                     <div style="margin-bottom: 15px; page-break-inside: avoid;">
@@ -4580,6 +4592,7 @@
                                     <th style="padding: 3px 5px; border: 1px solid #ddd; text-align: right;">Hours</th>
                                     <th style="padding: 3px 5px; border: 1px solid #ddd; text-align: right;">Crates</th>
                                     <th style="padding: 3px 5px; border: 1px solid #ddd; text-align: right;">Punnets</th>
+                                    <th style="padding: 3px 5px; border: 1px solid #ddd; text-align: right;">Kg</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -4590,6 +4603,7 @@
                     empTotalHours += day.hours;
                     empTotalCrates += day.crates;
                     empTotalPunnets += day.punnets;
+                    empTotalKg += day.kg || 0;
                     
                     html += `
                         <tr>
@@ -4597,6 +4611,7 @@
                             <td style="padding: 2px 5px; border: 1px solid #ddd; text-align: right;">${day.hours.toFixed(2)}</td>
                             <td style="padding: 2px 5px; border: 1px solid #ddd; text-align: right;">${day.crates}</td>
                             <td style="padding: 2px 5px; border: 1px solid #ddd; text-align: right;">${day.punnets}</td>
+                            <td style="padding: 2px 5px; border: 1px solid #ddd; text-align: right;">${(day.kg || 0).toFixed(2)}</td>
                         </tr>
                     `;
                 });
@@ -4607,6 +4622,7 @@
                                 <td style="padding: 2px 5px; border: 1px solid #ddd; text-align: right;">${empTotalHours.toFixed(2)}</td>
                                 <td style="padding: 2px 5px; border: 1px solid #ddd; text-align: right;">${empTotalCrates}</td>
                                 <td style="padding: 2px 5px; border: 1px solid #ddd; text-align: right;">${empTotalPunnets}</td>
+                                <td style="padding: 2px 5px; border: 1px solid #ddd; text-align: right;">${empTotalKg.toFixed(2)}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -4616,12 +4632,13 @@
                 grandTotalHours += empTotalHours;
                 grandTotalCrates += empTotalCrates;
                 grandTotalPunnets += empTotalPunnets;
+                grandTotalKg += empTotalKg;
             });
             
             html += `
                 <div style="margin-top: 15px; padding: 8px; background: #2c3e50; color: white; border-radius: 4px; page-break-inside: avoid;">
                     <h3 style="margin: 0 0 5px 0; font-size: 14px;">Grand Total</h3>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center;">
                         <div>
                             <div style="font-size: 18px; font-weight: bold;">${grandTotalHours.toFixed(2)}</div>
                             <div style="font-size: 11px; opacity: 0.9;">Hours</div>
@@ -4633,6 +4650,10 @@
                         <div>
                             <div style="font-size: 18px; font-weight: bold;">${grandTotalPunnets}</div>
                             <div style="font-size: 11px; opacity: 0.9;">Punnets</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 18px; font-weight: bold;">${grandTotalKg.toFixed(2)}</div>
+                            <div style="font-size: 11px; opacity: 0.9;">Kg</div>
                         </div>
                     </div>
                 </div>
