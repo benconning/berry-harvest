@@ -4305,43 +4305,69 @@
             
             // Update clock in record if it exists and time changed
             if (record.clockInRecord && newClockInTime) {
+                const firestoreId = record.clockInRecord.firestoreId;
+                
+                // Validate ID
+                if (!firestoreId || typeof firestoreId !== 'string') {
+                    console.error('Invalid clock in firestoreId:', firestoreId);
+                    showToast('Error: Invalid clock in record ID');
+                    return;
+                }
+                
                 const originalDate = new Date(record.clockInRecord.timestamp);
                 const [hours, minutes] = newClockInTime.split(':');
                 const newDate = new Date(originalDate);
                 newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
                 
-                const recordIndex = timeRecords.findIndex(r => 
-                    r.id === record.clockInRecord.id
-                );
+                const recordIndex = timeRecords.findIndex(r => r.firestoreId === firestoreId);
                 
                 if (recordIndex !== -1) {
                     timeRecords[recordIndex].timestamp = newDate.toISOString();
                     // Update in Firebase
-                    await db.collection('timeRecords').doc(record.clockInRecord.id).update({ 
-                        timestamp: newDate.toISOString() 
-                    });
-                    updated = true;
+                    try {
+                        await db.collection('timeRecords').doc(firestoreId).update({ 
+                            timestamp: newDate.toISOString() 
+                        });
+                        updated = true;
+                    } catch (error) {
+                        console.error('Firebase update error:', error);
+                        showToast('Error updating clock in time');
+                        return;
+                    }
                 }
             }
             
             // Update clock out record if it exists and time changed
             if (record.clockOutRecord && newClockOutTime) {
+                const firestoreId = record.clockOutRecord.firestoreId;
+                
+                // Validate ID
+                if (!firestoreId || typeof firestoreId !== 'string') {
+                    console.error('Invalid clock out firestoreId:', firestoreId);
+                    showToast('Error: Invalid clock out record ID');
+                    return;
+                }
+                
                 const originalDate = new Date(record.clockOutRecord.timestamp);
                 const [hours, minutes] = newClockOutTime.split(':');
                 const newDate = new Date(originalDate);
                 newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
                 
-                const recordIndex = timeRecords.findIndex(r => 
-                    r.id === record.clockOutRecord.id
-                );
+                const recordIndex = timeRecords.findIndex(r => r.firestoreId === firestoreId);
                 
                 if (recordIndex !== -1) {
                     timeRecords[recordIndex].timestamp = newDate.toISOString();
                     // Update in Firebase
-                    await db.collection('timeRecords').doc(record.clockOutRecord.id).update({ 
-                        timestamp: newDate.toISOString() 
-                    });
-                    updated = true;
+                    try {
+                        await db.collection('timeRecords').doc(firestoreId).update({ 
+                            timestamp: newDate.toISOString() 
+                        });
+                        updated = true;
+                    } catch (error) {
+                        console.error('Firebase update error:', error);
+                        showToast('Error updating clock out time');
+                        return;
+                    }
                 }
             }
             
