@@ -4346,8 +4346,7 @@
                             action: 'in',
                             fruit: null,
                             photo: null,
-                            id: Date.now(),
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                            id: Date.now()
                         };
                         
                         // Add to Firebase
@@ -4399,8 +4398,7 @@
                             action: 'out',
                             fruit: null,
                             photo: null,
-                            id: Date.now() + 1, // +1 to avoid collision if both created
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                            id: Date.now() + 1 // +1 to avoid collision if both created
                         };
                         
                         // Add to Firebase
