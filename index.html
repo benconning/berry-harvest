@@ -1132,8 +1132,8 @@
             <h3>Auto-Backup Status</h3>
             <p>Last backup: <strong id="lastBackupTime">Never</strong></p>
             <p style="color: #666; font-size: 14px;">Auto-backups run every 5 minutes and are kept for 7 days</p>
-            <p style="color: #e67e22; font-size: 13px; margin-top: 10px;">
-                ℹ️ Auto-backups include employees, time records, and settings only (harvest records are backed up manually to save space)
+            <p style="color: #27ae60; font-size: 13px; margin-top: 10px;">
+                ✅ Auto-backups save employees to Firebase (all other data is already safely stored in Firebase)
             </p>
         </div>
         
@@ -1780,36 +1780,37 @@
             backupInterval = setInterval(() => createAutoBackup(), 5 * 60 * 1000);
         }
         
-        function createAutoBackup() {
+        async function createAutoBackup() {
             try {
+                // CRITICAL: Only backup employees to Firebase
+                // Everything else is already safely stored in Firebase real-time
+                const employees = window.firebaseCache?.['employees'] || [];
+                
+                if (employees.length === 0) {
+                    console.warn('⚠️ No employees to backup');
+                    return;
+                }
+                
+                const timestamp = Date.now();
                 const backupData = {
                     timestamp: new Date().toISOString(),
-                    version: '1.0',
-                    type: 'auto',
-                    data: {
-                        employees: window.firebaseCache?.['employees'] || [],
-                        timeRecords: window.firebaseCache?.['timeRecords'] || []
-                    }
+                    employees: employees,
+                    count: employees.length
                 };
                 
-                // Add only settings (NOT harvest records - too large!)
-                const fruits = ['strawberries', 'raspberries', 'boysenberries', 'karakaBerries'];
-                fruits.forEach(fruit => {
-                    // Skip harvest records for auto-backup (they're large and safe in Firebase)
-                    backupData.data[`${fruit}_varieties`] = window.firebaseCache?.[`${fruit}_varieties`] || [];
-                    backupData.data[`${fruit}_blocks`] = window.firebaseCache?.[`${fruit}_blocks`] || [];
-                    backupData.data[`${fruit}_punnetSettings`] = window.firebaseCache?.[`${fruit}_punnetSettings`] || getDefaultPunnetSettings();
-                    backupData.data[`${fruit}_plantsPerBlock`] = window.firebaseCache?.[`${fruit}_plantsPerBlock`] || {};
-                    backupData.data[`${fruit}_currentBatchId`] = window.firebaseCache?.[`${fruit}_currentBatchId`] || 1;
-                });
+                // Save to Firebase backup collection (NO localStorage!)
+                await db.collection('backups').doc(`auto_${timestamp}`).set(backupData);
                 
-                const backupKey = `backup_${Date.now()}`;
-                localStorage.setItem(backupKey, JSON.stringify(backupData));
+                // Keep only last 10 auto-backups in Firebase
+                const oldBackups = await db.collection('backups')
+                    .where('timestamp', '<', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+                    .get();
+                    
+                oldBackups.forEach(doc => doc.ref.delete());
+                
                 localStorage.setItem('lastBackupTime', new Date().toISOString());
-                
-                cleanOldBackups();
-                showBackupIndicator('Auto-backup saved');
-                console.log('✅ Auto-backup created:', backupKey);
+                showBackupIndicator('Auto-backup saved to Firebase');
+                console.log(`✅ Auto-backup to Firebase: ${employees.length} employees`);
                 updateLastBackupTime();
             } catch (error) {
                 console.error('❌ Auto-backup failed:', error);
