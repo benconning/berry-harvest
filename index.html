@@ -4299,8 +4299,8 @@
                 return;
             }
             
-            // Disable button to prevent double-clicks
-            const saveBtn = event.target;
+            // Get the save button
+            const saveBtn = document.querySelector('#editTimeRecordModal .btn-success');
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving...';
             
@@ -4368,11 +4368,15 @@
                     // Close modal IMMEDIATELY
                     closeEditTimeRecordModal();
                     
+                    // Reset button
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save Changes';
+                    
                     // Reload display
                     loadTimeRecords();
                     
                     // Show success message
-                    showToast('Time record updated!');
+                    showToast('Time updated!');
                 } else {
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save Changes';
