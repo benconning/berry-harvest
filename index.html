@@ -4287,7 +4287,7 @@
             window.editingTimeRecord = null;
         }
         
-        function saveTimeRecordEdit() {
+        async function saveTimeRecordEdit() {
             const record = window.editingTimeRecord;
             if (!record) return;
             
@@ -4317,7 +4317,9 @@
                 if (recordIndex !== -1) {
                     timeRecords[recordIndex].timestamp = newDate.toISOString();
                     // Update in Firebase
-                    updateRecord('timeRecords', record.clockInRecord.id, { timestamp: newDate.toISOString() });
+                    await db.collection('timeRecords').doc(record.clockInRecord.id).update({ 
+                        timestamp: newDate.toISOString() 
+                    });
                     updated = true;
                 }
             }
@@ -4336,7 +4338,9 @@
                 if (recordIndex !== -1) {
                     timeRecords[recordIndex].timestamp = newDate.toISOString();
                     // Update in Firebase
-                    updateRecord('timeRecords', record.clockOutRecord.id, { timestamp: newDate.toISOString() });
+                    await db.collection('timeRecords').doc(record.clockOutRecord.id).update({ 
+                        timestamp: newDate.toISOString() 
+                    });
                     updated = true;
                 }
             }
