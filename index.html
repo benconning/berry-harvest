@@ -4372,6 +4372,10 @@
             }
             
             if (updated) {
+                // Update cache
+                if (window.firebaseCache) {
+                    window.firebaseCache['timeRecords'] = timeRecords;
+                }
                 // Save to storage
                 saveToStorage('timeRecords', timeRecords);
                 showToast('Time record updated successfully!');
