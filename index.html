@@ -4309,51 +4309,109 @@
                 const timeRecords = getFromStorage('timeRecords', []);
                 let updated = false;
                 
-                // Update clock in record if it exists and time changed
-                if (record.clockInRecord && newClockInTime) {
-                    const firestoreId = record.clockInRecord.firestoreId;
-                    
-                    if (!firestoreId) {
-                        throw new Error('Invalid clock in record ID');
-                    }
-                    
-                    const originalDate = new Date(record.clockInRecord.timestamp);
-                    const [hours, minutes] = newClockInTime.split(':');
-                    const newDate = new Date(originalDate);
-                    newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-                    
-                    const recordIndex = timeRecords.findIndex(r => r.firestoreId === firestoreId);
-                    
-                    if (recordIndex !== -1) {
-                        timeRecords[recordIndex].timestamp = newDate.toISOString();
-                        await db.collection('timeRecords').doc(firestoreId).update({ 
-                            timestamp: newDate.toISOString() 
-                        });
+                // Handle clock in time
+                if (newClockInTime) {
+                    if (record.clockInRecord) {
+                        // UPDATE existing clock in record
+                        const firestoreId = record.clockInRecord.firestoreId;
+                        
+                        if (!firestoreId) {
+                            throw new Error('Invalid clock in record ID');
+                        }
+                        
+                        const originalDate = new Date(record.clockInRecord.timestamp);
+                        const [hours, minutes] = newClockInTime.split(':');
+                        const newDate = new Date(originalDate);
+                        newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                        
+                        const recordIndex = timeRecords.findIndex(r => r.firestoreId === firestoreId);
+                        
+                        if (recordIndex !== -1) {
+                            timeRecords[recordIndex].timestamp = newDate.toISOString();
+                            await db.collection('timeRecords').doc(firestoreId).update({ 
+                                timestamp: newDate.toISOString() 
+                            });
+                            updated = true;
+                        }
+                    } else {
+                        // CREATE new clock in record
+                        const [hours, minutes] = newClockInTime.split(':');
+                        const newDate = new Date(record.dateObj);
+                        newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                        
+                        const newRecord = {
+                            employee_id: record.employee_id,
+                            employee_name: record.employee_name,
+                            timestamp: newDate.toISOString(),
+                            action: 'in',
+                            fruit: null,
+                            photo: null,
+                            id: Date.now(),
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+                        
+                        // Add to Firebase
+                        const docRef = await db.collection('timeRecords').add(newRecord);
+                        newRecord.firestoreId = docRef.id;
+                        
+                        // Add to local array
+                        timeRecords.push(newRecord);
                         updated = true;
+                        
+                        console.log('✅ Created new clock in record');
                     }
                 }
                 
-                // Update clock out record if it exists and time changed
-                if (record.clockOutRecord && newClockOutTime) {
-                    const firestoreId = record.clockOutRecord.firestoreId;
-                    
-                    if (!firestoreId) {
-                        throw new Error('Invalid clock out record ID');
-                    }
-                    
-                    const originalDate = new Date(record.clockOutRecord.timestamp);
-                    const [hours, minutes] = newClockOutTime.split(':');
-                    const newDate = new Date(originalDate);
-                    newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-                    
-                    const recordIndex = timeRecords.findIndex(r => r.firestoreId === firestoreId);
-                    
-                    if (recordIndex !== -1) {
-                        timeRecords[recordIndex].timestamp = newDate.toISOString();
-                        await db.collection('timeRecords').doc(firestoreId).update({ 
-                            timestamp: newDate.toISOString() 
-                        });
+                // Handle clock out time
+                if (newClockOutTime) {
+                    if (record.clockOutRecord) {
+                        // UPDATE existing clock out record
+                        const firestoreId = record.clockOutRecord.firestoreId;
+                        
+                        if (!firestoreId) {
+                            throw new Error('Invalid clock out record ID');
+                        }
+                        
+                        const originalDate = new Date(record.clockOutRecord.timestamp);
+                        const [hours, minutes] = newClockOutTime.split(':');
+                        const newDate = new Date(originalDate);
+                        newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                        
+                        const recordIndex = timeRecords.findIndex(r => r.firestoreId === firestoreId);
+                        
+                        if (recordIndex !== -1) {
+                            timeRecords[recordIndex].timestamp = newDate.toISOString();
+                            await db.collection('timeRecords').doc(firestoreId).update({ 
+                                timestamp: newDate.toISOString() 
+                            });
+                            updated = true;
+                        }
+                    } else {
+                        // CREATE new clock out record
+                        const [hours, minutes] = newClockOutTime.split(':');
+                        const newDate = new Date(record.dateObj);
+                        newDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                        
+                        const newRecord = {
+                            employee_id: record.employee_id,
+                            employee_name: record.employee_name,
+                            timestamp: newDate.toISOString(),
+                            action: 'out',
+                            fruit: null,
+                            photo: null,
+                            id: Date.now() + 1, // +1 to avoid collision if both created
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+                        
+                        // Add to Firebase
+                        const docRef = await db.collection('timeRecords').add(newRecord);
+                        newRecord.firestoreId = docRef.id;
+                        
+                        // Add to local array
+                        timeRecords.push(newRecord);
                         updated = true;
+                        
+                        console.log('✅ Created new clock out record');
                     }
                 }
                 
@@ -4376,7 +4434,7 @@
                     loadTimeRecords();
                     
                     // Show success message
-                    showToast('Time updated!');
+                    showToast('Time record saved!');
                 } else {
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save Changes';
