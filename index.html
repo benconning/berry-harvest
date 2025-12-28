@@ -1784,10 +1784,11 @@
             try {
                 // CRITICAL: Only backup employees to Firebase
                 // Everything else is already safely stored in Firebase real-time
-                const employees = window.firebaseCache?.['employees'] || [];
+               const employeesDoc = await db.collection('settings').doc('employees').get();
+                const employees = employeesDoc.exists ? employeesDoc.data().data : [];
                 
                 if (employees.length === 0) {
-                    console.warn('⚠️ No employees to backup');
+                    console.warn('⚠️ No employees found in Firebase - SKIPPING backup to avoid overwriting with empty data');
                     return;
                 }
                 
@@ -1829,6 +1830,38 @@
                 }
             }
         }
+
+        // SAFETY CHECK FUNCTION - Prevents accidental mass employee deletion
+    function validateEmployeeUpdate(newEmployees) {
+        const currentEmployees = window.firebaseCache?.['employees'] || [];
+        
+        if (currentEmployees.length > 0 && newEmployees.length === 0) {
+            console.error('🚨 BLOCKED: Attempted to delete all employees!');
+            alert('ERROR: Cannot delete all employees. Contact administrator.');
+            return false;
+        }
+        
+        if (currentEmployees.length > 0 && newEmployees.length < currentEmployees.length * 0.5) {
+            const confirmed = confirm(
+                `⚠️ WARNING: Reducing from ${currentEmployees.length} to ${newEmployees.length} employees. Continue?`
+            );
+            if (!confirmed) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+```
+
+So it will look like:
+```
+1831            }
+1832        }
+1833
+1834        // SAFETY CHECK FUNCTION - Prevents accidental mass employee deletion
+1835        function validateEmployeeUpdate(newEmployees) {
+...
         
         function showBackupIndicator(message) {
             const indicator = document.getElementById('backupIndicator');
@@ -2443,6 +2476,29 @@
                     return defaultValue;
                 }
             }
+
+            // VALIDATE EMPLOYEE UPDATES BEFORE SAVING
+        if (key === 'employees') {
+            if (!validateEmployeeUpdate(value)) {
+                return Promise.resolve(false);
+            }
+        }
+```
+
+So it will look like:
+```
+2477            }
+2478        }
+2479
+2480        // VALIDATE EMPLOYEE UPDATES BEFORE SAVING
+2481        if (key === 'employees') {
+2482            if (!validateEmployeeUpdate(value)) {
+2483                return Promise.resolve(false);
+2484            }
+2485        }
+2486
+2487        // Fruit-specific keys
+2488        const fruitSpecificKeys = ...
             
             // Fruit-specific keys
             const fruitSpecificKeys = ['harvestRecords', 'varieties', 'blocks', 'punnetSettings', 'plantsPerBlock', 'currentBatchId'];
@@ -3746,6 +3802,17 @@
         }
         
         function saveEmployeeEdit() {
+            // Force backup before making changes
+            createAutoBackup();
+```
+
+So it will look like:
+```
+3804        function saveEmployeeEdit() {
+3805            // Force backup before making changes
+3806            createAutoBackup();
+3807
+3808            const index = parseInt(document.getElementById('editEmployeeId').value);
             const index = parseInt(document.getElementById('editEmployeeId').value);
             const name = document.getElementById('editEmployeeName').value.trim();
             const isActive = document.getElementById('editEmployeeActive').checked;
