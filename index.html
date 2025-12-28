@@ -1782,12 +1782,12 @@
         
         async function createAutoBackup() {
             try {
-                // CRITICAL: Only backup employees to Firebase
-                // Everything else is already safely stored in Firebase real-time
-                const employees = window.firebaseCache?.['employees'] || [];
+                // CRITICAL: Get employees DIRECTLY from Firebase, not cache
+                const employeesDoc = await db.collection('settings').doc('employees').get();
+                const employees = employeesDoc.exists ? employeesDoc.data().data : [];
                 
                 if (employees.length === 0) {
-                    console.warn('⚠️ No employees to backup');
+                    console.warn('⚠️ No employees found in Firebase - SKIPPING backup to avoid overwriting with empty data');
                     return;
                 }
                 
@@ -1828,6 +1828,28 @@
                     }
                 }
             }
+        }
+        
+        // SAFETY CHECK FUNCTION - Prevents accidental mass employee deletion
+        function validateEmployeeUpdate(newEmployees) {
+            const currentEmployees = window.firebaseCache?.['employees'] || [];
+            
+            if (currentEmployees.length > 0 && newEmployees.length === 0) {
+                console.error('🚨 BLOCKED: Attempted to delete all employees!');
+                alert('ERROR: Cannot delete all employees. Contact administrator.');
+                return false;
+            }
+            
+            if (currentEmployees.length > 0 && newEmployees.length < currentEmployees.length * 0.5) {
+                const confirmed = confirm(
+                    `⚠️ WARNING: Reducing from ${currentEmployees.length} to ${newEmployees.length} employees. Continue?`
+                );
+                if (!confirmed) {
+                    return false;
+                }
+            }
+            
+            return true;
         }
         
         function showBackupIndicator(message) {
@@ -2443,7 +2465,12 @@
                     return defaultValue;
                 }
             }
-            
+                  // VALIDATE EMPLOYEE UPDATES BEFORE SAVING
+        if (key === 'employees') {
+            if (!validateEmployeeUpdate(value)) {
+                return Promise.resolve(false);
+            }
+        }
             // Fruit-specific keys
             const fruitSpecificKeys = ['harvestRecords', 'varieties', 'blocks', 'punnetSettings', 'plantsPerBlock', 'currentBatchId'];
             const storageKey = (currentFruit && fruitSpecificKeys.includes(key)) ? `${currentFruit}_${key}` : key;
@@ -3746,6 +3773,9 @@
         }
         
         function saveEmployeeEdit() {
+            // Force backup before making changes
+            createAutoBackup();
+            
             const index = parseInt(document.getElementById('editEmployeeId').value);
             const name = document.getElementById('editEmployeeName').value.trim();
             const isActive = document.getElementById('editEmployeeActive').checked;
