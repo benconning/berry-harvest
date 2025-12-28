@@ -2465,12 +2465,7 @@
                     return defaultValue;
                 }
             }
-                  // VALIDATE EMPLOYEE UPDATES BEFORE SAVING
-        if (key === 'employees') {
-            if (!validateEmployeeUpdate(value)) {
-                return Promise.resolve(false);
-            }
-        }
+      
             // Fruit-specific keys
             const fruitSpecificKeys = ['harvestRecords', 'varieties', 'blocks', 'punnetSettings', 'plantsPerBlock', 'currentBatchId'];
             const storageKey = (currentFruit && fruitSpecificKeys.includes(key)) ? `${currentFruit}_${key}` : key;
@@ -2505,7 +2500,14 @@
                     return Promise.resolve(false);
                 }
             }
-            
+
+    // VALIDATE EMPLOYEE UPDATES BEFORE SAVING
+        if (key === 'employees') {
+            if (!validateEmployeeUpdate(value)) {
+                return Promise.resolve(false);
+            }
+        }
+        
             // Fruit-specific keys
             const fruitSpecificKeys = ['harvestRecords', 'varieties', 'blocks', 'punnetSettings', 'plantsPerBlock', 'currentBatchId'];
             const storageKey = (currentFruit && fruitSpecificKeys.includes(key)) ? `${currentFruit}_${key}` : key;
