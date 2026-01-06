@@ -1772,50 +1772,60 @@
         
         let backupInterval = null;
         
-        function startAutoBackup() {
-            console.log('🔄 Starting auto-backup system...');
-            // First backup after 30 seconds
-            setTimeout(() => createAutoBackup(), 30000);
-            // Then every 5 minutes
-            backupInterval = setInterval(() => createAutoBackup(), 5 * 60 * 1000);
+function startAutoBackup() {
+    console.log('🔄 Starting auto-backup system...');
+    // LONGER DELAY: Wait 60 seconds for Firebase to fully sync
+    setTimeout(() => createAutoBackup(), 60000);
+    // Then every 5 minutes
+    backupInterval = setInterval(() => createAutoBackup(), 5 * 60 * 1000);
+}
+        
+      async function createAutoBackup() {
+    try {
+        // CRITICAL: Get employees DIRECTLY from Firebase, not cache
+        const employeesDoc = await db.collection('settings').doc('employees').get();
+        const employees = employeesDoc.exists ? employeesDoc.data().data : [];
+        
+        // SAFETY CHECK: Never backup if we have 0 employees
+        if (employees.length === 0) {
+            console.warn('⚠️ BLOCKED: Cannot backup 0 employees - Firebase may not be synced yet or data is actually empty');
+            console.warn('⚠️ Skipping this backup to prevent data loss');
+            return;
         }
         
-        async function createAutoBackup() {
-            try {
-                // CRITICAL: Get employees DIRECTLY from Firebase, not cache
-                const employeesDoc = await db.collection('settings').doc('employees').get();
-                const employees = employeesDoc.exists ? employeesDoc.data().data : [];
-                
-                if (employees.length === 0) {
-                    console.warn('⚠️ No employees found in Firebase - SKIPPING backup to avoid overwriting with empty data');
-                    return;
-                }
-                
-                const timestamp = Date.now();
-                const backupData = {
-                    timestamp: new Date().toISOString(),
-                    employees: employees,
-                    count: employees.length
-                };
-                
-                // Save to Firebase backup collection (NO localStorage!)
-                await db.collection('backups').doc(`auto_${timestamp}`).set(backupData);
-                
-                // Keep only last 10 auto-backups in Firebase
-                const oldBackups = await db.collection('backups')
-                    .where('timestamp', '<', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-                    .get();
-                    
-                oldBackups.forEach(doc => doc.ref.delete());
-                
-                localStorage.setItem('lastBackupTime', new Date().toISOString());
-                showBackupIndicator('Auto-backup saved to Firebase');
-                console.log(`✅ Auto-backup to Firebase: ${employees.length} employees`);
-                updateLastBackupTime();
-            } catch (error) {
-                console.error('❌ Auto-backup failed:', error);
-            }
+        // Additional safety: Check if user is still logged in
+        if (!auth.currentUser) {
+            console.warn('⚠️ BLOCKED: User logged out, skipping backup');
+            return;
         }
+        
+        const timestamp = Date.now();
+        const backupData = {
+            timestamp: new Date().toISOString(),
+            employees: employees,
+            count: employees.length,
+            userId: auth.currentUser.email
+        };
+        
+        // Save to Firebase backup collection
+        await db.collection('backups').doc(`auto_${timestamp}`).set(backupData);
+        
+        // Keep only last 20 auto-backups in Firebase
+        const oldBackups = await db.collection('backups')
+            .where('timestamp', '<', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+            .get();
+            
+        oldBackups.forEach(doc => doc.ref.delete());
+        
+        localStorage.setItem('lastBackupTime', new Date().toISOString());
+        showBackupIndicator('Auto-backup saved to Firebase');
+        console.log(`✅ Auto-backup to Firebase: ${employees.length} employees`);
+        updateLastBackupTime();
+    } catch (error) {
+        console.error('❌ Auto-backup failed:', error);
+        // Don't show error to user - just log it
+    }
+}
         
         function cleanOldBackups() {
             const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
